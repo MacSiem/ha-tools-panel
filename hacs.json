@@ -1,5 +1,5 @@
 {
-  "name": "HA Tools Panel",
-  "render_readme": true,
-  "content_in_root": true
+    "name":  "HA Tools Panel",
+    "filename":  "ha-tools-panel.js",
+    "render_readme":  true
 }
