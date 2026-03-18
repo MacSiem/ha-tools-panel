@@ -8,15 +8,23 @@
 // ── Build version & auto-update detection ──
 // Zmień BUILD_VERSION przy każdej aktualizacji kodu.
 // Panel automatycznie wykryje nową wersję i pokaże toast z przyciskiem "Odśwież".
-const HA_TOOLS_BUILD = '2.4.0';
-const HA_TOOLS_BUILD_TS = '20260318-1200';
+const HA_TOOLS_BUILD = '2.5.0';
+const HA_TOOLS_BUILD_TS = '20260318-1800';
 
 (function _checkVersion() {
   const KEY = 'ha-tools-build';
   const prev = localStorage.getItem(KEY);
-  if (prev && prev !== HA_TOOLS_BUILD && prev < HA_TOOLS_BUILD) {
-    // Nowa wersja — pokaż toast po załadowaniu panelu
-    window.__haToolsUpdateAvailable = { from: prev, to: HA_TOOLS_BUILD };
+  // Only show upgrade toast when version actually increases (string comparison)
+  // and only for real upgrades, not cache/timing artifacts
+  if (prev && prev !== HA_TOOLS_BUILD) {
+    const prevParts = prev.split('.').map(Number);
+    const newParts = HA_TOOLS_BUILD.split('.').map(Number);
+    const isUpgrade = newParts[0] > prevParts[0] ||
+      (newParts[0] === prevParts[0] && newParts[1] > prevParts[1]) ||
+      (newParts[0] === prevParts[0] && newParts[1] === prevParts[1] && newParts[2] > prevParts[2]);
+    if (isUpgrade) {
+      window.__haToolsUpdateAvailable = { from: prev, to: HA_TOOLS_BUILD };
+    }
   }
   localStorage.setItem(KEY, HA_TOOLS_BUILD);
 })();
@@ -71,15 +79,16 @@ class HAToolsPanel extends HTMLElement {
   }
 
   _loadAddonScripts() {
-    const cacheBuster = `?v=${Date.now()}`;
+    // Always use Date.now() cache buster to avoid stale JS from HACS/browser cache
+    const cb = Date.now();
     const scripts = HAToolsPanel.TOOL_SCRIPTS;
     for (const [tag, src] of Object.entries(scripts)) {
-      if (customElements.get(tag)) continue; // already registered
-      // Check if script tag already exists
-      if (document.querySelector(`script[src^="${src}"]`)) continue;
+      if (customElements.get(tag)) continue; // already registered by HACS or previous load
+      // Force-load with cache buster — do NOT check for existing script tags
+      // because HACS may have loaded an older cached version that failed to register
       const script = document.createElement('script');
       script.type = 'text/javascript';
-      script.src = src + cacheBuster;
+      script.src = src + '?_=' + cb;
       script.async = true;
       script.onerror = () => console.warn(`[HA Tools] Failed to load: ${src}`);
       document.head.appendChild(script);
@@ -968,7 +977,7 @@ ${HAToolsPanel.CSS}</style>
         <div class="sidebar">
           <div class="sidebar-header">
             <span>\u{1F6E0}\uFE0F</span> HA Tools
-            <span class="version">v2.4</span>
+            <span class="version">v2.5</span>
           </div>
           <div class="sidebar-scroll">
             <div class="nav-item active" data-view="home">
