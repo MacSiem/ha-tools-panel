@@ -88,7 +88,7 @@ class HAToolsPanel extends HTMLElement {
 
   _startPolling() {
     let attempts = 0;
-    const maxAttempts = 60; // 30 seconds max
+    const maxAttempts = 120; // 60 seconds max
     const poll = () => {
       const { available } = this._getToolStatus();
       const newCount = available.length;
@@ -446,6 +446,20 @@ class HAToolsPanel extends HTMLElement {
 .ar-toggle input:checked ~ .ar-track .ar-thumb { left: 18px; }
 .ar-lbl { font-size: 11px; color: var(--bento-text-secondary); font-weight: 500; }
 .ar-toggle input:checked ~ .ar-lbl { color: var(--bento-primary); }
+
+/* UNINSTALLED / UNAVAILABLE TOOLS */
+.uninstalled-list { display: flex; flex-direction: column; gap: 12px; }
+.uninstalled-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  background: var(--bento-bg); border: 1.5px dashed var(--bento-border);
+  border-radius: var(--bento-radius); transition: var(--bento-transition);
+}
+.uninstalled-item:hover { border-color: var(--bento-primary); background: rgba(59, 130, 246, 0.03); }
+.ui-icon { font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bento-card); border-radius: var(--bento-radius-sm); border: 1px solid var(--bento-border); flex-shrink: 0; }
+.ui-name { font-size: 14px; font-weight: 600; color: var(--bento-text); min-width: 120px; }
+.ui-desc { flex: 1; font-size: 12.5px; color: var(--bento-text-secondary); line-height: 1.4; }
+.uninstalled-item.loading-item { opacity: 0.6; border-style: dotted; }
+.uninstalled-item.loading-item .ui-desc { font-style: italic; }
 
 .empty { text-align: center; padding: 48px 24px; color: var(--bento-text-secondary); font-size: 14px; }
 .empty .big { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
@@ -1150,23 +1164,35 @@ ${HAToolsPanel.CSS}</style>
         ${unavailable.length > 0 ? `
           <div class="home-section">
             <div class="home-section-title">
-              \u{1F4E6} Dostępne do instalacji <span class="count">(${unavailable.length})</span>
+              ${this._loading ? '\u23F3' : '\u{1F4E6}'} ${this._loading ? 'Ładowanie narzędzi...' : 'Dostępne do instalacji'} <span class="count">(${unavailable.length})</span>
             </div>
-            <div class="uninstalled-list">
-              ${unavailable.map(t => `
-                <div class="uninstalled-item">
-                  <div class="ui-icon">${t.icon}</div>
-                  <div class="ui-name">${t.name}</div>
-                  <div class="ui-desc">${t.desc}</div>
-                  <a class="btn btn-secondary btn-sm" href="https://github.com/${t.repo}" target="_blank" rel="noopener">
-                    GitHub
-                  </a>
-                  <a class="btn btn-primary btn-sm hacs-install" data-repo="${t.repo}">
-                    \u{1F4E5} Zainstaluj (HACS)
-                  </a>
-                </div>
-              `).join('')}
-            </div>
+            ${this._loading ? `
+              <div class="uninstalled-list">
+                ${unavailable.map(t => `
+                  <div class="uninstalled-item loading-item">
+                    <div class="ui-icon">${t.icon}</div>
+                    <div class="ui-name">${t.name}</div>
+                    <div class="ui-desc">Ładowanie...</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="uninstalled-list">
+                ${unavailable.map(t => `
+                  <div class="uninstalled-item">
+                    <div class="ui-icon">${t.icon}</div>
+                    <div class="ui-name">${t.name}</div>
+                    <div class="ui-desc">${t.desc}</div>
+                    <a class="btn btn-secondary btn-sm" href="https://github.com/${t.repo}" target="_blank" rel="noopener">
+                      GitHub
+                    </a>
+                    <a class="btn btn-primary btn-sm hacs-install" data-repo="${t.repo}">
+                      \u{1F4E5} Zainstaluj (HACS)
+                    </a>
+                  </div>
+                `).join('')}
+              </div>
+            `}
           </div>
         ` : ''}
 
