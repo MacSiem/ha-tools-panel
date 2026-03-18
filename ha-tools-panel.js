@@ -668,11 +668,29 @@ class HAToolsPanel extends HTMLElement {
       this._rendered = true;
       this._render();
     }
+    // Throttle hass propagation to child card (HA sends ~3 updates/sec)
     if (this._cardInstance) {
-      if (this._cardInstance.tagName.toLowerCase() === 'ha-cry-analyzer') {
-        this._cardInstance.hassObj = hass;
-      } else {
-        this._cardInstance.hass = hass;
+      const now = Date.now();
+      if (!this._lastHassPropagation || (now - this._lastHassPropagation) > 5000) {
+        this._lastHassPropagation = now;
+        if (this._cardInstance.tagName.toLowerCase() === 'ha-cry-analyzer') {
+          this._cardInstance.hassObj = hass;
+        } else {
+          this._cardInstance.hass = hass;
+        }
+      } else if (!this._hassPropScheduled) {
+        this._hassPropScheduled = true;
+        setTimeout(() => {
+          this._hassPropScheduled = false;
+          this._lastHassPropagation = Date.now();
+          if (this._cardInstance) {
+            if (this._cardInstance.tagName.toLowerCase() === 'ha-cry-analyzer') {
+              this._cardInstance.hassObj = this._hass;
+            } else {
+              this._cardInstance.hass = this._hass;
+            }
+          }
+        }, 5000);
       }
     }
   }
