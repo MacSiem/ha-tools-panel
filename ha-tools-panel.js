@@ -14,7 +14,7 @@ const HA_TOOLS_BUILD_TS = '20260318-1200';
 (function _checkVersion() {
   const KEY = 'ha-tools-build';
   const prev = localStorage.getItem(KEY);
-  if (prev && prev !== HA_TOOLS_BUILD) {
+  if (prev && prev !== HA_TOOLS_BUILD && prev < HA_TOOLS_BUILD) {
     // Nowa wersja — pokaż toast po załadowaniu panelu
     window.__haToolsUpdateAvailable = { from: prev, to: HA_TOOLS_BUILD };
   }
