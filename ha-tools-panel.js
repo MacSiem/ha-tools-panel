@@ -437,6 +437,15 @@ class HAToolsPanel extends HTMLElement {
 .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: var(--bento-radius-xs); }
 .btn-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--bento-border); background: var(--bento-card); border-radius: var(--bento-radius-sm); cursor: pointer; transition: var(--bento-transition); font-size: 16px; padding: 0; }
 .btn-icon:hover { border-color: var(--bento-primary); color: var(--bento-primary); background: rgba(59, 130, 246, 0.04); }
+.toolbar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.ar-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.ar-toggle input { display: none; }
+.ar-track { width: 34px; height: 18px; background: var(--bento-border); border-radius: 9px; position: relative; transition: 0.2s; }
+.ar-thumb { position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.ar-toggle input:checked ~ .ar-track { background: var(--bento-primary); }
+.ar-toggle input:checked ~ .ar-track .ar-thumb { left: 18px; }
+.ar-lbl { font-size: 11px; color: var(--bento-text-secondary); font-weight: 500; }
+.ar-toggle input:checked ~ .ar-lbl { color: var(--bento-primary); }
 
 .empty { text-align: center; padding: 48px 24px; color: var(--bento-text-secondary); font-size: 14px; }
 .empty .big { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
@@ -986,7 +995,14 @@ ${HAToolsPanel.CSS}</style>
           <div class="loading-bar" style="display:none"></div>
           <div class="toolbar">
             <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button><div class="toolbar-title" id="title">\u{1F3E0} Home</div>
-            <button class="btn-icon" id="refreshBtn" style="display:none">\u{1F504} Odśwież</button>
+            <div class="toolbar-actions" id="toolbarActions" style="display:none">
+              <button class="btn-icon" id="refreshBtn" title="Odśwież dane">&#x21bb;</button>
+              <label class="ar-toggle" title="Auto-odświeżanie co 30s">
+                <input type="checkbox" id="autoRefreshCb">
+                <span class="ar-track"><span class="ar-thumb"></span></span>
+                <span class="ar-lbl">Auto</span>
+              </label>
+            </div>
           </div>
           <div class="content" id="content"></div>
         </div>
@@ -1058,6 +1074,33 @@ ${HAToolsPanel.CSS}</style>
         if (item) this._loadTool(this._activeToolId, item.dataset.tag);
       }
     });
+
+    // Auto-refresh toggle
+    const arCb = this.shadowRoot.getElementById('autoRefreshCb');
+    if (arCb) {
+      arCb.checked = this._getSetting('autoRefresh', false);
+      arCb.addEventListener('change', () => {
+        this._setSetting('autoRefresh', arCb.checked);
+        if (arCb.checked) this._startAutoRefresh();
+        else this._stopAutoRefresh();
+      });
+    }
+  }
+
+  _startAutoRefresh() {
+    this._stopAutoRefresh();
+    this._autoRefreshTimer = setInterval(() => {
+      if (this._activeView === 'tool' && this._activeToolId && this._cardInstance) {
+        const item = this.shadowRoot.querySelector(`.nav-item[data-tool="${this._activeToolId}"]`);
+        if (item) this._loadTool(this._activeToolId, item.dataset.tag);
+      }
+    }, 30000);
+  }
+
+  _stopAutoRefresh() {
+    if (this._autoRefreshTimer) { clearInterval(this._autoRefreshTimer); this._autoRefreshTimer = null; }
+    const cb = this.shadowRoot ? this.shadowRoot.getElementById('autoRefreshCb') : null;
+    if (cb) cb.checked = false;
   }
 
   _setActiveNav(activeItem) {
@@ -1071,7 +1114,7 @@ ${HAToolsPanel.CSS}</style>
     this._cardInstance = null;
     const title = this.shadowRoot.getElementById('title');
     title.textContent = '\u{1F3E0} Home';
-    this.shadowRoot.getElementById('refreshBtn').style.display = 'none';
+    this.shadowRoot.getElementById('toolbarActions').style.display = 'none'; this._stopAutoRefresh();
 
     const { available, unavailable } = this._getToolStatus();
     const cats = HAToolsPanel.CATEGORIES;
@@ -1177,7 +1220,7 @@ ${HAToolsPanel.CSS}</style>
     this._cardInstance = null;
     const title = this.shadowRoot.getElementById('title');
     title.textContent = '\u2699\uFE0F Ustawienia';
-    this.shadowRoot.getElementById('refreshBtn').style.display = 'none';
+    this.shadowRoot.getElementById('toolbarActions').style.display = 'none'; this._stopAutoRefresh();
 
     const { available } = this._getToolStatus();
     const content = this.shadowRoot.getElementById('content');
@@ -1517,7 +1560,7 @@ ${HAToolsPanel.CSS}</style>
     const displayIcon = tool ? tool.icon : '';
     const title = this.shadowRoot.getElementById('title');
     title.textContent = `${displayIcon} ${displayName}`;
-    this.shadowRoot.getElementById('refreshBtn').style.display = '';
+    this.shadowRoot.getElementById('toolbarActions').style.display = '';
 
     const content = this.shadowRoot.getElementById('content');
     content.innerHTML = `<div class="empty"><div class="big">\u23F3</div><div>Ładowanie...</div></div>`;
