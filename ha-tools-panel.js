@@ -463,12 +463,49 @@ class HAToolsPanel extends HTMLElement {
 
 /* SETTINGS */
 .settings-view { animation: fadeSlideIn 0.4s ease-out; }
-.settings-section { background: var(--bento-card); border: 1px solid var(--bento-border); border-radius: var(--bento-radius); padding: 24px; margin-bottom: 20px; }
-.settings-section-title { font-size: 16px; font-weight: 600; color: var(--bento-text); margin-bottom: 16px; }
-.settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--bento-border); }
-.settings-item:last-child { border-bottom: none; }
-.settings-label { font-size: 13px; font-weight: 500; color: var(--bento-text); }
-.settings-desc { font-size: 12px; color: var(--bento-text-secondary); margin-top: 2px; }
+.settings-group { background: var(--bento-card); border: 1px solid var(--bento-border); border-radius: var(--bento-radius); margin-bottom: 16px; overflow: hidden; }
+.settings-group-header {
+  display: flex; justify-content: space-between; align-items: center; padding: 16px 20px;
+  font-size: 15px; font-weight: 600; color: var(--bento-text); cursor: pointer;
+  background: var(--bento-card); border-bottom: 1px solid var(--bento-border);
+  transition: var(--bento-transition); user-select: none;
+}
+.settings-group-header:hover { background: rgba(59, 130, 246, 0.04); }
+.settings-group-header .chevron { font-size: 12px; color: var(--bento-text-secondary); transition: transform 0.2s ease; }
+.settings-group-header.collapsed .chevron { transform: rotate(-90deg); }
+.settings-group-body { padding: 4px 0; }
+.settings-group-body.hidden { display: none; }
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--bento-border);
+  transition: var(--bento-transition);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row:hover { background: rgba(59, 130, 246, 0.03); }
+.setting-info { flex: 1; min-width: 0; margin-right: 16px; }
+.setting-label { font-size: 13.5px; font-weight: 500; color: var(--bento-text); }
+.setting-desc { font-size: 12px; color: var(--bento-text-secondary); margin-top: 3px; line-height: 1.4; }
+.setting-control { flex-shrink: 0; }
+.setting-select {
+  padding: 8px 12px; border: 1.5px solid var(--bento-border); border-radius: var(--bento-radius-sm);
+  background: var(--bento-card); color: var(--bento-text); font-size: 13px;
+  font-family: 'Inter', sans-serif; cursor: pointer; transition: var(--bento-transition);
+  outline: none; min-width: 120px;
+}
+.setting-select:focus { border-color: var(--bento-primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.setting-toggle { position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer; }
+.setting-toggle input { opacity: 0; width: 0; height: 0; }
+.setting-toggle .slider {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bento-border); border-radius: 12px; transition: 0.25s ease;
+}
+.setting-toggle .slider::before {
+  content: ''; position: absolute; width: 20px; height: 20px;
+  background: white; border-radius: 50%; top: 2px; left: 2px;
+  transition: 0.25s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.setting-toggle input:checked + .slider { background: var(--bento-primary); }
+.setting-toggle input:checked + .slider::before { left: 22px; }
 .settings-value { font-size: 13px; color: var(--bento-text-secondary); }
 
 /* TOGGLE */
