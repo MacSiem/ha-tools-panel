@@ -389,8 +389,8 @@ class HAToolsPanel extends HTMLElement {
 
 .nav-item .nav-badge {
   margin-left: auto;
-  background: var(--bento-error);
-  color: white;
+  background: var(--bento-border);
+  color: var(--bento-text-secondary);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 7px;
@@ -511,7 +511,10 @@ class HAToolsPanel extends HTMLElement {
 .tool-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .tool-card-icon { font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.08); border-radius: var(--bento-radius-sm); }
 .tool-card-name { font-size: 14px; font-weight: 600; color: var(--bento-text); }
-.tool-card-desc { font-size: 12px; color: var(--bento-text-secondary); line-height: 1.5; }
+.tool-card-desc { font-size: 12px; color: var(--bento-text-secondary); line-height: 1.5; margin-bottom: 10px; }
+.tool-card-footer { display: flex; align-items: center; justify-content: space-between; }
+.tool-card-category { font-size: 11px; font-weight: 500; color: var(--bento-text-secondary); }
+.tool-card-status { font-size: 11px; font-style: italic; color: var(--bento-success); }
 
 /* TOOL STATUS */
 .tool-status { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
@@ -1188,7 +1191,7 @@ ${HAToolsPanel.CSS}</style>
                   <div class="tool-card-desc">${t.desc}</div>
                   <div class="tool-card-footer">
                     <span class="tool-card-category">${cats[t.category]?.name || t.category}</span>
-                    <span class="tool-card-status">\u2705 Aktywne</span>
+                    <span class="tool-card-status">(aktywne)</span>
                   </div>
                 </div>
               `).join('')}
