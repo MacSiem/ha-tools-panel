@@ -1137,19 +1137,19 @@ ${HAToolsPanel.CSS}</style>
   }
 
   _startAutoRefresh() {
-    this._stopAutoRefresh();
+    if (this._autoRefreshTimer) clearInterval(this._autoRefreshTimer);
     this._autoRefreshTimer = setInterval(() => {
       if (this._activeView === 'tool' && this._activeToolId && this._cardInstance) {
         const item = this.shadowRoot.querySelector(`.nav-item[data-tool="${this._activeToolId}"]`);
         if (item) this._loadTool(this._activeToolId, item.dataset.tag);
       }
     }, 30000);
+    const cb = this.shadowRoot ? this.shadowRoot.getElementById('autoRefreshCb') : null;
+    if (cb) cb.checked = true;
   }
 
   _stopAutoRefresh() {
     if (this._autoRefreshTimer) { clearInterval(this._autoRefreshTimer); this._autoRefreshTimer = null; }
-    const cb = this.shadowRoot ? this.shadowRoot.getElementById('autoRefreshCb') : null;
-    if (cb) cb.checked = false;
   }
 
   _setActiveNav(activeItem) {
@@ -1671,6 +1671,9 @@ ${HAToolsPanel.CSS}</style>
     const title = this.shadowRoot.getElementById('title');
     title.textContent = `${displayIcon} ${displayName}`;
     this.shadowRoot.getElementById('toolbarActions').style.display = '';
+    // Sync auto-refresh checkbox with setting
+    const arCb = this.shadowRoot.getElementById('autoRefreshCb');
+    if (arCb) arCb.checked = this._getSetting('autoRefresh', false);
 
     const content = this.shadowRoot.getElementById('content');
     content.innerHTML = `<div class="empty"><div class="big">\u23F3</div><div>Ładowanie...</div></div>`;
