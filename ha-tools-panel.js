@@ -477,6 +477,11 @@ class HAToolsPanel extends HTMLElement {
   padding: 12px 20px 6px; border-top: 1px solid var(--bento-border);
   margin-top: 4px;
 }
+.trace-current-info {
+  padding: 12px 20px; margin: 0; font-size: 13px; color: var(--bento-text);
+  background: rgba(59,130,246,0.06); border-bottom: 1px solid var(--bento-border);
+}
+.trace-current-info .val { font-weight: 700; color: var(--bento-primary); }
 .setting-action-row { padding: 12px 20px; border-top: 1px solid var(--bento-border); }
 .btn-apply {
   display: inline-flex; align-items: center; gap: 6px;
