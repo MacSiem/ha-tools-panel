@@ -470,6 +470,14 @@ class HAToolsPanel extends HTMLElement {
 .uninstalled-item.loading-item { opacity: 0.6; border-style: dotted; }
 .uninstalled-item.loading-item .ui-desc { font-style: italic; }
 
+/* SETTING SUBSECTIONS */
+.setting-subsection {
+  font-size: 11px; font-weight: 700; color: var(--bento-text-secondary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 12px 20px 6px; border-top: 1px solid var(--bento-border);
+  margin-top: 4px;
+}
+
 .empty { text-align: center; padding: 48px 24px; color: var(--bento-text-secondary); font-size: 14px; }
 .empty .big { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
 
@@ -1389,6 +1397,10 @@ ${HAToolsPanel.CSS}</style>
           const dashboardCard = this._getSetting(`${prefix}.dashboardCard`, true);
           const pageSize = this._getSetting(`${prefix}.pageSize`, 15);
           const isTraceViewer = prefix === 'trace-viewer';
+          const isDataExporter = prefix === 'data-exporter';
+          const snapEnabled = isDataExporter ? this._getSetting('data-exporter.snapshots.enabled', false) : false;
+          const snapInterval = isDataExporter ? this._getSetting('data-exporter.snapshots.interval', 60) : 60;
+          const snapMax = isDataExporter ? this._getSetting('data-exporter.snapshots.max', 50) : 50;
           return `
             <div class="settings-group">
               <div class="settings-group-header" data-group="${prefix}">
@@ -1396,7 +1408,7 @@ ${HAToolsPanel.CSS}</style>
                 <span class="chevron">\u25BC</span>
               </div>
               <div class="settings-group-body" data-body="${prefix}">
-                <div class="setting-subsection">Wyświetlanie</div>
+                <div class="setting-subsection">Wy\u015Bwietlanie</div>
                 <div class="setting-row">
                   <div class="setting-info">
                     <div class="setting-label">Pokazuj w dashboardzie</div>
@@ -1410,7 +1422,7 @@ ${HAToolsPanel.CSS}</style>
                   </div>
                 </div>
 
-                <div class="setting-subsection">Działanie</div>
+                <div class="setting-subsection">Dzia\u0142anie</div>
                 ${isTraceViewer ? `
                 <div class="setting-row">
                   <div class="setting-info">
@@ -1429,10 +1441,55 @@ ${HAToolsPanel.CSS}</style>
                   </div>
                 </div>
                 ` : ''}
+                ${isDataExporter ? `
+                <div class="setting-subsection">Snapshoty</div>
                 <div class="setting-row">
                   <div class="setting-info">
-                    <div class="setting-label">Interwał odświeżania (sek)</div>
-                    <div class="setting-desc">Jak często odświeżać dane</div>
+                    <div class="setting-label">Zbieranie snapshot\u00F3w</div>
+                    <div class="setting-desc">Automatycznie zapisuj stany encji w localStorage</div>
+                  </div>
+                  <div class="setting-control">
+                    <label class="setting-toggle">
+                      <input type="checkbox" data-setting="data-exporter.snapshots.enabled" ${snapEnabled ? 'checked' : ''}>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <div class="setting-label">Interwa\u0142 zbierania</div>
+                    <div class="setting-desc">Co ile sekund zapisywa\u0107 snapshot</div>
+                  </div>
+                  <div class="setting-control">
+                    <select class="setting-select" data-setting="data-exporter.snapshots.interval">
+                      <option value="30" ${snapInterval == 30 ? 'selected' : ''}>30s</option>
+                      <option value="60" ${snapInterval == 60 ? 'selected' : ''}>1 min</option>
+                      <option value="300" ${snapInterval == 300 ? 'selected' : ''}>5 min</option>
+                      <option value="900" ${snapInterval == 900 ? 'selected' : ''}>15 min</option>
+                      <option value="3600" ${snapInterval == 3600 ? 'selected' : ''}>1h</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <div class="setting-label">Maksymalna ilo\u015B\u0107</div>
+                    <div class="setting-desc">Ile snapshot\u00F3w przechowywa\u0107 w localStorage</div>
+                  </div>
+                  <div class="setting-control">
+                    <select class="setting-select" data-setting="data-exporter.snapshots.max">
+                      <option value="20" ${snapMax == 20 ? 'selected' : ''}>20</option>
+                      <option value="50" ${snapMax == 50 ? 'selected' : ''}>50</option>
+                      <option value="100" ${snapMax == 100 ? 'selected' : ''}>100</option>
+                      <option value="200" ${snapMax == 200 ? 'selected' : ''}>200</option>
+                    </select>
+                  </div>
+                </div>
+                ` : ''}
+                <div class="setting-subsection">Dzia\u0142anie</div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <div class="setting-label">Interwa\u0142 od\u015Bwie\u017Cania (sek)</div>
+                    <div class="setting-desc">Jak cz\u0119sto od\u015Bwie\u017Ca\u0107 dane</div>
                   </div>
                   <div class="setting-control">
                     <select class="setting-select" data-setting="${prefix}.refreshInterval">
