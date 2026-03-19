@@ -470,13 +470,26 @@ class HAToolsPanel extends HTMLElement {
 .uninstalled-item.loading-item { opacity: 0.6; border-style: dotted; }
 .uninstalled-item.loading-item .ui-desc { font-style: italic; }
 
-/* SETTING SUBSECTIONS */
+/* SETTING SUBSECTIONS & ACTIONS */
 .setting-subsection {
   font-size: 11px; font-weight: 700; color: var(--bento-text-secondary);
   text-transform: uppercase; letter-spacing: 0.06em;
   padding: 12px 20px 6px; border-top: 1px solid var(--bento-border);
   margin-top: 4px;
 }
+.setting-action-row { padding: 12px 20px; border-top: 1px solid var(--bento-border); }
+.btn-apply {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border: 1.5px solid var(--bento-primary); background: rgba(59,130,246,0.08);
+  color: var(--bento-primary); border-radius: var(--bento-radius-sm); cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; transition: var(--bento-transition);
+}
+.btn-apply:hover { background: var(--bento-primary); color: white; }
+.status-msg { padding: 8px 16px; margin: 8px 20px; border-radius: var(--bento-radius-sm); font-size: 12px; display: none; }
+.status-msg.visible { display: block; }
+.status-msg.success { background: rgba(16,185,129,0.08); color: var(--bento-success); border: 1px solid var(--bento-success); }
+.status-msg.error { background: rgba(239,68,68,0.08); color: var(--bento-error); border: 1px solid var(--bento-error); }
+.status-msg.info { background: rgba(59,130,246,0.08); color: var(--bento-primary); border: 1px solid var(--bento-primary); }
 
 .empty { text-align: center; padding: 48px 24px; color: var(--bento-text-secondary); font-size: 14px; }
 .empty .big { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
