@@ -159,20 +159,31 @@ class HAToolsPanel extends HTMLElement {
     if (this._loading) {
       bar.style.display = 'flex';
       bar.innerHTML = `
-        <div style="flex:1;display:flex;align-items:center;gap:12px">
-          <span style="font-size:13px;color:#64748B">Ładowanie narzędzi... ${this._loadedCount}/${total}</span>
-          <div class="loading-progress">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;width:100%;">
+          <div class="spinner" style="width:18px;height:18px;border-width:2px;flex-shrink:0;"></div>
+          <span style="font-size:13px;font-weight:500;color:var(--bento-text);">\u0141adowanie... ${this._loadedCount}/${total}</span>
+          <div class="loading-progress" style="flex:1;">
             <div class="loading-progress-fill" style="width:${(this._loadedCount / total) * 100}%"></div>
           </div>
         </div>
       `;
     } else {
       if (this._loadedCount >= total) {
-        bar.innerHTML = `<span style="color:#22C55E;font-weight:600;font-size:13px">✅ Wszystkie narzędzia załadowane (${this._loadedCount}/${total})</span>`;
-        setTimeout(() => { bar.style.display = 'none'; }, 3000);
+        bar.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;width:100%;">
+            <span style="font-size:16px;">\u2705</span>
+            <span style="flex:1;font-size:13px;font-weight:500;color:var(--bento-text);">${this._loadedCount}/${total} narz\u0119dzi gotowych</span>
+            <button onclick="this.closest('.loading-bar').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--bento-text-secondary);padding:0 4px;">\u2715</button>
+          </div>`;
+        setTimeout(() => { bar.style.display = 'none'; }, 4000);
       } else {
-        bar.innerHTML = `<span style="color:#F59E0B;font-weight:600;font-size:13px">⚠️ Załadowano ${this._loadedCount}/${total} narzędzi</span>`;
-        setTimeout(() => { bar.style.display = 'none'; }, 5000);
+        bar.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;width:100%;">
+            <span style="font-size:16px;">\u26A0\uFE0F</span>
+            <span style="flex:1;font-size:13px;font-weight:500;color:var(--bento-text);">${this._loadedCount}/${total} narz\u0119dzi za\u0142adowanych</span>
+            <button onclick="this.closest('.loading-bar').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--bento-text-secondary);padding:0 4px;">\u2715</button>
+          </div>`;
+        setTimeout(() => { bar.style.display = 'none'; }, 8000);
       }
     }
   }
