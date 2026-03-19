@@ -13,19 +13,7 @@ const HA_TOOLS_BUILD_TS = '20260318-1800';
 
 (function _checkVersion() {
   const KEY = 'ha-tools-build';
-  const prev = localStorage.getItem(KEY);
-  // Only show upgrade toast when version actually increases (string comparison)
-  // and only for real upgrades, not cache/timing artifacts
-  if (prev && prev !== HA_TOOLS_BUILD) {
-    const prevParts = prev.split('.').map(Number);
-    const newParts = HA_TOOLS_BUILD.split('.').map(Number);
-    const isUpgrade = newParts[0] > prevParts[0] ||
-      (newParts[0] === prevParts[0] && newParts[1] > prevParts[1]) ||
-      (newParts[0] === prevParts[0] && newParts[1] === prevParts[1] && newParts[2] > prevParts[2]);
-    if (isUpgrade) {
-      window.__haToolsUpdateAvailable = { from: prev, to: HA_TOOLS_BUILD };
-    }
-  }
+  // Just store current version, no toast (HA caching makes version detection unreliable)
   localStorage.setItem(KEY, HA_TOOLS_BUILD);
 })();
 
@@ -126,30 +114,7 @@ class HAToolsPanel extends HTMLElement {
   }
 
   _showUpdateToastIfNeeded() {
-    const upd = window.__haToolsUpdateAvailable;
-    if (!upd) return;
-    delete window.__haToolsUpdateAvailable;
-    const toast = document.createElement('div');
-    toast.innerHTML = `
-      <div style="position:fixed;bottom:24px;right:24px;z-index:99999;
-        background:#FFFFFF;color:#1E293B;padding:16px 20px;border-radius:12px;
-        box-shadow:0 4px 20px rgba(0,0,0,0.1);font-size:14px;
-        display:flex;align-items:center;gap:12px;max-width:420px;
-        animation:slideUp .3s ease-out;border-left:3px solid #3B82F6;">
-        <div style="flex:1">
-          <div style="font-weight:600;margin-bottom:4px">\u{1F504} HA Tools zaktualizowane</div>
-          <div style="opacity:0.8;font-size:12px;color:#64748B">v${upd.from} \u2192 v${upd.to} — odśwież przeglądarkę, aby załadować nową wersję.</div>
-        </div>
-        <button onclick="location.reload(true)" style="
-          background:#3B82F6;color:#fff;border:none;padding:8px 16px;
-          border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;
-          font-size:13px;">Odśwież</button>
-        <button onclick="this.closest('div').parentElement.remove()" style="
-          background:none;border:none;color:#64748B;cursor:pointer;
-          font-size:18px;padding:4px;opacity:0.7">\u2715</button>
-      </div>`;
-    // Append to the main document body (outside shadow DOM for visibility)
-    document.body.appendChild(toast);
+    // Disabled: HA caching makes version detection unreliable, toast was showing false downgrades
   }
 
   _updateLoadingStatus() {
