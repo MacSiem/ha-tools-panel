@@ -1,8 +1,16 @@
 # 🔧 HA Tools Panel
 
-A comprehensive tools panel for Home Assistant with 14 integrated tools for monitoring, debugging, system management and daily life.
+> A comprehensive tools panel for Home Assistant with 15 integrated tools for monitoring, debugging, system management and daily life.
 
-## Included Tools
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/MacSiem/ha-tools-panel/releases)
+[![HA Version](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-brightgreen.svg)](https://www.home-assistant.io/)
+
+## 📸 Screenshot
+
+![HA Tools Panel Screenshot](screenshot.png)
+
+## 🛠️ Included Tools
 
 | Tool | Description | Category |
 |------|-------------|----------|
@@ -21,29 +29,55 @@ A comprehensive tools panel for Home Assistant with 14 integrated tools for moni
 | 💽 Storage Monitor | Monitor storage usage | System |
 | 🛡️ Security Check | Audit security config | System |
 
-## Installation
+## 📦 Installation
 
-### HACS (recommended)
-1. Open HACS in Home Assistant
-2. Go to Frontend > Explore & Download Repositories
-3. Search for "HA Tools Panel"
-4. Install and restart Home Assistant
+### HACS (Recommended)
 
-## Screenshot
+1. Open **HACS** in your Home Assistant sidebar
+2. Go to **Frontend** → click the three-dots menu → **Custom repositories**
+3. Add: `https://github.com/MacSiem/ha-tools-panel` with category **Lovelace**
+4. Click **Explore & Download Repositories**, search for **HA Tools Panel**, and download
+5. Restart Home Assistant
+6. Go to **Settings → Dashboards → Resources** and add:
+   ```
+   /hacsfiles/ha-tools-panel/ha-tools-panel.js
+   ```
 
-![Screenshot](screenshot.png)
+### Manual Installation
 
-## Changelog
+1. Download `ha-tools-panel.js` from the [latest release](https://github.com/MacSiem/ha-tools-panel/releases)
+2. Copy the file to `config/www/community/ha-tools-panel/ha-tools-panel.js`
+3. Add a resource in **Settings → Dashboards → Resources**:
+   ```
+   /local/community/ha-tools-panel/ha-tools-panel.js
+   ```
+4. Add a custom panel in `configuration.yaml`:
+   ```yaml
+   panel_custom:
+     - name: ha-tools-panel
+       sidebar_title: Tools
+       sidebar_icon: mdi:tools
+       url_path: tools
+       module_url: /local/community/ha-tools-panel/ha-tools-panel.js
+   ```
+5. Restart Home Assistant
 
-### v2.3 (2026-03-17)
-- Bento Light Mode UI for all 14 tools
-- Throttled hass updates (5s) to prevent UI lag
-- Fixed Data Exporter blank window and pagination
-- Fixed Cry Analyzer blank window and dual-loading
-- Improved Storage Monitor and Security Check readability
-- CSS custom properties for theming
-- Stable data persistence across tab switches
+## ⚙️ Configuration
 
-## License
+No special configuration required after installation. The panel auto-discovers all tools and loads them dynamically.
 
-MIT
+### Requirements
+- Home Assistant 2023.1 or newer
+- HACS 1.6.0 or newer (for HACS installation)
+
+## 🔄 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for full version history.
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+## 👤 Author
+
+Created by [MacSiem](https://github.com/MacSiem)

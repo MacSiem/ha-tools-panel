@@ -8,8 +8,8 @@
 // ── Build version & auto-update detection ──
 // Zmień BUILD_VERSION przy każdej aktualizacji kodu.
 // Panel automatycznie wykryje nową wersję i pokaże toast z przyciskiem "Odśwież".
-const HA_TOOLS_BUILD = '2.5.0';
-const HA_TOOLS_BUILD_TS = '20260318-1800';
+const HA_TOOLS_BUILD = '3.1.0';
+const HA_TOOLS_BUILD_TS = '20260323-1851';
 
 (function _checkVersion() {
   const KEY = 'ha-tools-build';
@@ -103,7 +103,7 @@ class HAToolsPanel extends HTMLElement {
         if (this._activeView === 'home') this._showHome();
         if (this._pollTimer) clearInterval(this._pollTimer);
         this._pollTimer = null;
-        console.log(`[HA Tools] Loading complete: ${newCount}/${HAToolsPanel.TOOLS.length} tools available`);
+        // Loading complete
         this._showUpdateToastIfNeeded();
         return;
       }
@@ -1715,4 +1715,4 @@ ${HAToolsPanel.CSS}</style>
 }
 
 if (!customElements.get('ha-tools-panel')) { customElements.define('ha-tools-panel', HAToolsPanel); }
-console.log('[HA Tools Panel v2.2] Registered — auto-loading addons');
+// HA Tools Panel registered
