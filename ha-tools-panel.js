@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HA Tools Panel v2.2 — Auto-loading addons with progress notification
  * Author: MacSiem
  * Features: Auto-loads addon scripts, polls for customElements registration,
@@ -63,6 +63,8 @@ class HAToolsPanel extends HTMLElement {
       'ha-data-exporter': '/local/community/ha-data-exporter/ha-data-exporter.js',
       'ha-storage-monitor': '/local/community/ha-storage-monitor/ha-storage-monitor.js',
       'ha-security-check': '/local/community/ha-security-check/ha-security-check.js',
+      'ha-energy-email': '/local/community/ha-energy-email/ha-energy-email.js',
+      'ha-vacuum-water-monitor': '/local/community/ha-vacuum-water-monitor/ha-vacuum-water-monitor.js',
     };
   }
 
@@ -1716,3 +1718,4 @@ ${HAToolsPanel.CSS}</style>
 
 if (!customElements.get('ha-tools-panel')) { customElements.define('ha-tools-panel', HAToolsPanel); }
 // HA Tools Panel registered
+
