@@ -1,4 +1,4 @@
-﻿/**
+/**
  * HA Tools Panel v2.2 — Auto-loading addons with progress notification
  * Author: MacSiem
  * Features: Auto-loads addon scripts, polls for customElements registration,
@@ -65,6 +65,7 @@ class HAToolsPanel extends HTMLElement {
       'ha-security-check': '/local/community/ha-security-check/ha-security-check.js',
       'ha-energy-email': '/local/community/ha-energy-email/ha-energy-email.js',
       'ha-vacuum-water-monitor': '/local/community/ha-vacuum-water-monitor/ha-vacuum-water-monitor.js',
+      'ha-log-email': '/local/community/ha-log-email/ha-log-email.js',
     };
   }
 
@@ -222,6 +223,7 @@ class HAToolsPanel extends HTMLElement {
       { id: 'data-exporter', name: 'Data Exporter', icon: '\u{1F4E4}', tag: 'ha-data-exporter', desc: 'Eksportuj dane z Home Assistant', repo: 'MacSiem/ha-data-exporter', category: 'system' },
       { id: 'storage-monitor', name: 'Storage Monitor', icon: '\u{1F4BD}', tag: 'ha-storage-monitor', desc: 'Wizualizacja użycia dysku w stylu WinDirStat', repo: 'MacSiem/ha-storage-monitor', category: 'system' },
       { id: 'security-check', name: 'Security Check', icon: '\u{1F6E1}\uFE0F', tag: 'ha-security-check', desc: 'Audyt bezpieczeństwa Home Assistant', repo: 'MacSiem/ha-security-check', category: 'system' },
+      { id: 'log-email', name: 'Log Email', icon: '\uD83D\uDEA8', tag: 'ha-log-email', desc: 'Email digest b\u0142\u0119d\u00F3w i ostrze\u017Ce\u0144 HA', repo: 'MacSiem/ha-log-email', category: 'reports' },
     ];
   }
 
