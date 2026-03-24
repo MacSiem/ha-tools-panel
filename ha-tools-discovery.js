@@ -34,6 +34,7 @@
     { id: 'log-email',           name: 'Log Email',           icon: '\u{1F6A8}', tag: 'ha-log-email',           repo: 'MacSiem/ha-log-email',           category: 'reports', desc: 'Email digest b\u0142\u0119d\u00f3w HA', standalone: true, related: ['smart-reports', 'security-check'] },
     { id: 'yaml-checker',        name: 'YAML Checker',        icon: '\u{1F5C2}\uFE0F', tag: 'ha-yaml-checker',  repo: 'MacSiem/ha-yaml-checker',        category: 'debug',   desc: 'Walidacja YAML HA', standalone: true, related: ['trace-viewer', 'automation-analyzer'] },
     { id: 'energy-insights',      name: 'Energy Insights',      icon: '\u26A1', tag: 'ha-energy-insights',    repo: 'MacSiem/ha-energy-insights',    category: 'monitor', desc: 'Wykresy zu\u017cycia energii', standalone: true, related: ['energy-optimizer', 'energy-email'] },
+    { id: 'ai-automation-builder', name: 'AI Automation Builder', icon: '\uD83E\uDD16', tag: 'ha-ai-automation-builder', repo: 'MacSiem/ha-ai-automation-builder', category: 'debug', desc: 'Tworzenie automatyzacji z AI', standalone: true, related: ['automation-analyzer', 'yaml-checker'] },
   ];
 
   // Expose globally
@@ -329,4 +330,5 @@
   window._hatd_loaded = true;
   console.log('[HA Tools Discovery] v1.0.0 loaded - ' + HA_TOOLS_REGISTRY.length + ' tools in registry');
 })();
+
 
