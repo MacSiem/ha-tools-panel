@@ -31,6 +31,8 @@ class HAToolsPanel extends HTMLElement {
     this._loading = true;
     this._pollTimer = null;
     this._scriptLoadPromises = [];
+    this._lastSidebarAvailCount = -1;
+    this._lastSidebarUnavailCount = -1;
   }
 
   connectedCallback() {
@@ -160,26 +162,35 @@ class HAToolsPanel extends HTMLElement {
 
   _updateSidebar() {
     const { available, unavailable } = this._getToolStatus();
-    // Update badge
+    const availCount = available.length;
+    const unavailCount = unavailable.length;
+
+    // Always update badge and section header counts (cheap text-only updates)
     const badge = this.shadowRoot?.querySelector('.nav-badge');
-    if (badge) badge.textContent = `${available.length}/${HAToolsPanel.TOOLS.length}`;
-    // Update tools count in section header
+    if (badge) badge.textContent = `${availCount}/${HAToolsPanel.TOOLS.length}`;
     const toolsSection = this.shadowRoot?.querySelector('.nav-section-tools');
-    if (toolsSection) toolsSection.textContent = `NarzÄ™dzia (${available.length})`;
-    // Update unavailable section header
+    if (toolsSection) toolsSection.textContent = `Narz\u0119dzia (${availCount})`;
     const unavailSection = this.shadowRoot?.querySelector('.nav-section-unavailable');
     if (unavailSection) {
-      if (unavailable.length > 0) {
-        unavailSection.textContent = `NiedostÄ™pne (${unavailable.length})`;
+      if (unavailCount > 0) {
+        unavailSection.textContent = `Niedost\u0119pne (${unavailCount})`;
         unavailSection.style.display = '';
       } else {
         unavailSection.style.display = 'none';
       }
     }
-    // Rebuild tool nav items
+
+    // Only do full DOM rebuild when the tool list actually changed in size.
+    // This prevents sidebar flicker caused by repeated innerHTML resets during the 60s polling loop.
+    const listChanged = availCount !== this._lastSidebarAvailCount || unavailCount !== this._lastSidebarUnavailCount;
+
     const toolsContainer = this.shadowRoot?.querySelector('.nav-tools-list');
     const unavailContainer = this.shadowRoot?.querySelector('.nav-unavail-list');
-    if (toolsContainer) {
+
+    if (listChanged && toolsContainer) {
+      this._lastSidebarAvailCount = availCount;
+      this._lastSidebarUnavailCount = unavailCount;
+
       toolsContainer.innerHTML = available.map(t => `
         <div class="nav-item${this._activeToolId === t.id ? ' active' : ''}" data-tool="${t.id}" data-tag="${t.tag}">
           <span class="nav-icon">${t.icon}</span>
@@ -192,20 +203,30 @@ class HAToolsPanel extends HTMLElement {
           this._loadTool(item.dataset.tool, item.dataset.tag);
         });
       });
-    }
-    if (unavailContainer) {
-      if (unavailable.length > 0) {
-        unavailContainer.innerHTML = unavailable.map(t => `
-          <div class="nav-item unavailable" title="Nie zainstalowane">
-            <span class="nav-icon">${t.icon}</span>
-            <span>${t.name}</span>
-          </div>
-        `).join('');
-        unavailContainer.style.display = '';
-      } else {
-        unavailContainer.innerHTML = '';
-        unavailContainer.style.display = 'none';
+
+      if (unavailContainer) {
+        if (unavailCount > 0) {
+          unavailContainer.innerHTML = unavailable.map(t => `
+            <div class="nav-item unavailable" title="Nie zainstalowane">
+              <span class="nav-icon">${t.icon}</span>
+              <span>${t.name}</span>
+            </div>
+          `).join('');
+          unavailContainer.style.display = '';
+        } else {
+          unavailContainer.innerHTML = '';
+          unavailContainer.style.display = 'none';
+        }
       }
+    } else if (!listChanged && toolsContainer) {
+      // List unchanged — just sync the active class without touching DOM structure
+      toolsContainer.querySelectorAll('.nav-item[data-tool]').forEach(item => {
+        if (item.dataset.tool === this._activeToolId) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
     }
   }
 
@@ -308,6 +329,7 @@ class HAToolsPanel extends HTMLElement {
 .sidebar {
   width: 260px;
   background: var(--bento-card);
+  contain: layout style; /* Isolate reflows to prevent flicker on DOM updates */
   border-right: 1px solid var(--bento-border);
   display: flex;
   flex-direction: column;
