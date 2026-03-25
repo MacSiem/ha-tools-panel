@@ -114,7 +114,6 @@ class HAEnergyEmail extends HTMLElement {
   _render() {
     this.shadowRoot.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         :host {
           --pr: #3B82F6; --pr-l: rgba(59,130,246,.1);
           --ok: #10B981; --ok-l: rgba(16,185,129,.1);

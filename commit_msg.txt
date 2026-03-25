@@ -1,0 +1,12 @@
+﻿fix(sentence-manager): eliminate flickering + categorized UX
+
+- Remove unnecessary re-renders from hass setter (no entity deps)
+- Render only active tab instead of all 5 tabs on each render()
+- Move Google Fonts from CSS @import to <link> tag (prevents FOUT)
+- Categorize intents by domain (baby, lights, climate, etc.)
+- Add collapsible intent sections with toggle arrows
+- Add file selector (existing/new) for YAML import
+- Update info text: custom_sentences auto-discovered, no config.yaml needed
+- Show directory structure guide and source file tracking
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>

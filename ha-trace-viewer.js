@@ -972,6 +972,57 @@ class HATraceViewer extends HTMLElement {
     const tabLabels = { timeline: this._t('timeline'), related: `${this._t('related')} (${relatedEntities.length})`,
       changes: `${this._t('changes')} (${changedVars.length})`, config: this._t('config'), json: this._t('json') };
 
+    // Build only the active tab pane
+    let activePane = '';
+    switch (this.detailTab) {
+      case 'timeline':
+        activePane = steps.map((s, i) => `
+          <div class="tl-step s-${s.status}">
+            <div class="tl-head">
+              <div class="tl-num" style="background:${s.category === 'trigger' ? '#3B82F6' : s.category === 'condition' ? '#F59E0B' : s.category === 'result' ? (s.status === 'success' ? '#10B981' : '#EF4444') : s.status === 'error' ? '#EF4444' : '#10B981'}">${s.icon}</div>
+              <div class="tl-title">
+                <span class="tl-cat">${s.category.toUpperCase()}</span>
+                <span class="tl-desc">${s.description}</span>
+              </div>
+              <span class="tl-dur">${s.duration > 0 ? this._fmtDur(s.duration) : ''}</span>
+            </div>
+            ${s.error ? `<div class="tl-err">\u26A0 ${typeof s.error === 'string' ? s.error : JSON.stringify(s.error)}</div>` : ''}
+            ${Object.keys(s.details).length > 0 ? `<div class="tl-dets">${Object.entries(s.details).filter(([,v]) => v !== undefined && v !== null).map(([k, v]) =>
+              `<span class="tl-det"><b>${k}:</b> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`
+            ).join('')}</div>` : ''}
+            ${s.timestamp ? `<div class="tl-ts">${this._fmtTimeShort(s.timestamp)}</div>` : ''}
+          </div>
+        `).join('');
+        break;
+      case 'related':
+        activePane = relatedEntities.length === 0 ? `<div class="empty" style="height:auto;padding:24px">${this._t('noRelatedActivity')}</div>` :
+          `<div class="rel-list">${relatedEntities.map(r => `
+            <div class="rel-item">
+              <div class="rel-entity">${r.friendlyName || r.entity}</div>
+              <div class="rel-action">${r.action}</div>
+              ${r.time ? `<div class="rel-time">${this._fmtTimeShort(r.time)}</div>` : ''}
+            </div>
+          `).join('')}</div>`;
+        break;
+      case 'changes':
+        activePane = changedVars.length === 0 ? `<div class="empty" style="height:auto;padding:24px">${this._t('noChanges')}</div>` :
+          changedVars.map(cv => `
+            <div class="cv-item">
+              <div class="cv-head"><span class="cv-step">${cv.step}</span><span class="cv-name">${cv.variable}</span></div>
+              <pre class="cv-val">${this._safeJson(cv.value)}</pre>
+            </div>
+          `).join('');
+        break;
+      case 'config':
+        activePane = `<div class="config-header">${this._t('automationConfig')}</div>
+          <pre class="yaml-content">${this._escHtml(configYaml)}</pre>`;
+        break;
+      case 'json':
+        activePane = `<div class="json-bar"><button class="btn-s" id="cpJson">\u{1F4CB} ${this._t('copyJson')}</button></div>
+          <pre class="json-content">${this._safeJson(rawData)}</pre>`;
+        break;
+    }
+
     return `
       <!-- Header with status -->
       <div class="det-head">
@@ -997,60 +1048,8 @@ class HATraceViewer extends HTMLElement {
 
       <!-- Tab content -->
       <div class="det-body">
-        <!-- TIMELINE -->
-        <div class="tab-pane ${this.detailTab === 'timeline' ? 'act' : ''}" id="tp-timeline">
-          ${steps.map((s, i) => `
-            <div class="tl-step s-${s.status}">
-              <div class="tl-head">
-                <div class="tl-num" style="background:${s.category === 'trigger' ? '#3B82F6' : s.category === 'condition' ? '#F59E0B' : s.category === 'result' ? (s.status === 'success' ? '#10B981' : '#EF4444') : s.status === 'error' ? '#EF4444' : '#10B981'}">${s.icon}</div>
-                <div class="tl-title">
-                  <span class="tl-cat">${s.category.toUpperCase()}</span>
-                  <span class="tl-desc">${s.description}</span>
-                </div>
-                <span class="tl-dur">${s.duration > 0 ? this._fmtDur(s.duration) : ''}</span>
-              </div>
-              ${s.error ? `<div class="tl-err">\u26A0 ${typeof s.error === 'string' ? s.error : JSON.stringify(s.error)}</div>` : ''}
-              ${Object.keys(s.details).length > 0 ? `<div class="tl-dets">${Object.entries(s.details).filter(([,v]) => v !== undefined && v !== null).map(([k, v]) =>
-                `<span class="tl-det"><b>${k}:</b> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`
-              ).join('')}</div>` : ''}
-              ${s.timestamp ? `<div class="tl-ts">${this._fmtTimeShort(s.timestamp)}</div>` : ''}
-            </div>
-          `).join('')}
-        </div>
-
-        <!-- RELATED ACTIVITY -->
-        <div class="tab-pane ${this.detailTab === 'related' ? 'act' : ''}" id="tp-related">
-          ${relatedEntities.length === 0 ? `<div class="empty" style="height:auto;padding:24px">${this._t('noRelatedActivity')}</div>` :
-          `<div class="rel-list">${relatedEntities.map(r => `
-            <div class="rel-item">
-              <div class="rel-entity">${r.friendlyName || r.entity}</div>
-              <div class="rel-action">${r.action}</div>
-              ${r.time ? `<div class="rel-time">${this._fmtTimeShort(r.time)}</div>` : ''}
-            </div>
-          `).join('')}</div>`}
-        </div>
-
-        <!-- CHANGES -->
-        <div class="tab-pane ${this.detailTab === 'changes' ? 'act' : ''}" id="tp-changes">
-          ${changedVars.length === 0 ? `<div class="empty" style="height:auto;padding:24px">${this._t('noChanges')}</div>` :
-          changedVars.map(cv => `
-            <div class="cv-item">
-              <div class="cv-head"><span class="cv-step">${cv.step}</span><span class="cv-name">${cv.variable}</span></div>
-              <pre class="cv-val">${this._safeJson(cv.value)}</pre>
-            </div>
-          `).join('')}
-        </div>
-
-        <!-- CONFIG -->
-        <div class="tab-pane ${this.detailTab === 'config' ? 'act' : ''}" id="tp-config">
-          <div class="config-header">${this._t('automationConfig')}</div>
-          <pre class="yaml-content">${this._escHtml(configYaml)}</pre>
-        </div>
-
-        <!-- JSON -->
-        <div class="tab-pane ${this.detailTab === 'json' ? 'act' : ''}" id="tp-json">
-          <div class="json-bar"><button class="btn-s" id="cpJson">\u{1F4CB} ${this._t('copyJson')}</button></div>
-          <pre class="json-content">${this._safeJson(rawData)}</pre>
+        <div class="tab-pane act" id="tp-${this.detailTab}">
+          ${activePane}
         </div>
       </div>
     `;
@@ -1275,7 +1274,6 @@ class HATraceViewer extends HTMLElement {
 
   _css() {
     return `<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --pc: #3B82F6;

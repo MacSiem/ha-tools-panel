@@ -115,7 +115,6 @@ class HaBabyTracker extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
 /* ===== BENTO LIGHT MODE DESIGN SYSTEM ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-primary: #3B82F6;
@@ -655,7 +654,6 @@ canvas {
       
 /* === Modern Bento Light Mode === */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-bg: #F8FAFC;
@@ -1007,7 +1005,8 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
         </div>
 
         <!-- Feeding Tab -->
-        <div class="tab-content ${this.selectedTab === 'feeding' ? 'active' : ''}">
+        ${this.selectedTab === 'feeding' ? `
+        <div class="tab-content active">
           <div class="form-group">
             <label class="form-label">Type</label>
             <select id="feedingType">
@@ -1043,9 +1042,11 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
             <div id="feedingList"></div>
           </div>
         </div>
+        ` : ''}
 
         <!-- Diapers Tab -->
-        <div class="tab-content ${this.selectedTab === 'diapers' ? 'active' : ''}">
+        ${this.selectedTab === 'diapers' ? `
+        <div class="tab-content active">
           <div class="form-group">
             <label class="form-label">Type</label>
             <select id="diapersType">
@@ -1085,9 +1086,11 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
             <div id="diapersLis"></div>
           </div>
         </div>
+        ` : ''}
 
         <!-- Sleep Tab -->
-        <div class="tab-content ${this.selectedTab === 'sleep' ? 'active' : ''}">
+        ${this.selectedTab === 'sleep' ? `
+        <div class="tab-content active">
           <div class="timer-display">
             <div class="timer-value" id="timerDisplay">00:00</div>
             <div class="timer-label" id="timerLabel">Sleep Timer</div>
@@ -1122,9 +1125,11 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
             <div id="sleepList"></div>
           </div>
         </div>
+        ` : ''}
 
         <!-- Growth Tab -->
-        <div class="tab-content ${this.selectedTab === 'growth' ? 'active' : ''}">
+        ${this.selectedTab === 'growth' ? `
+        <div class="tab-content active">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Measurement</label>
@@ -1155,6 +1160,7 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
           <h3 style="margin: 20px 0 12px 0; font-size: 16px; font-weight: 600;">Measurements</h3>
           <div id="growthList"></div>
         </div>
+        ` : ''}
 
         <div class="export-section">
           <button class="btn-secondary" id="exportBtn">📥 Export Data (JSON)</button>

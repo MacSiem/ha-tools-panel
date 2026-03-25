@@ -1014,198 +1014,198 @@ class HAAutomationAnalyzer extends HTMLElement {
       }
     });
 
-    const filteredListHtml = filteredAutos.length > 0
-      ? filteredAutos.map(a => {
-          const stateClass = a.isFailed ? "error" : a.state === "on" ? "on" : "off";
-          const timeStr = this._formatTimeSince(a.lastTriggered);
-          const execStr = typeof a.avgExecutionTime === "number" ? `${a.avgExecutionTime}ms` : "";
-          const countStr = a.todayCount > 0 ? `${a.todayCount}\u00d7` : "";
-          return `<div class="auto-item-full" data-automation-id="${a.automationId}">
-            <span class="auto-state-dot ${stateClass}"></span>
-            <span class="auto-name" title="${a.name}">${a.name}</span>
-            ${countStr ? `<span class="auto-detail" title="Dzisiejsze uruchomienia">${countStr}</span>` : ""}
-            ${execStr ? `<span class="auto-detail" title="\u015Aredni czas">${execStr}</span>` : ""}
-            <span class="auto-detail">${timeStr}</span>
-          </div>`;
-        }).join("")
-      : `<div class="empty-state">Brak automatyzacji pasuj\u0105cych do filtr\u00f3w</div>`;
+    let activeTabContent = '';
 
-    const overviewContent = `
-      <div class="health-row">
-        <div class="health-circle ${healthClass}">${healthScore}</div>
-        <div>
-          <div class="card-title">Stan systemu automatyzacji</div>
-          <div class="health-label">${healthText}</div>
-        </div>
-      </div>
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-value">${stats.total}</div>
-          <div class="stat-label">\u0141\u0105cznie</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">${stats.active}</div>
-          <div class="stat-label">Aktywnych</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">${stats.disabled}</div>
-          <div class="stat-label">Wy\u0142\u0105czonych</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">${stats.failed}</div>
-          <div class="stat-label">B\u0142\u0119d\u00f3w</div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:var(--aa-space-4)">
-        <h2 class="card-title">Automatyzacje</h2>
-        <div class="filter-bar">
-          <input type="text" id="aa-filter-input" placeholder="Szukaj automatyzacji\u2026" value="${this._filterText.replace(/"/g, "&quot;")}">
-          <select id="aa-sort-select">
-            <option value="lastTriggered" ${this._sortBy === "lastTriggered" ? "selected" : ""}>Ostatnie uruchomienie</option>
-            <option value="name" ${this._sortBy === "name" ? "selected" : ""}>Nazwa</option>
-            <option value="todayCount" ${this._sortBy === "todayCount" ? "selected" : ""}>Uruchomienia dzi\u015B</option>
-            <option value="avgTime" ${this._sortBy === "avgTime" ? "selected" : ""}>Czas wykonania</option>
-            <option value="state" ${this._sortBy === "state" ? "selected" : ""}>Stan</option>
-          </select>
-          <button class="sort-dir-btn" id="aa-sort-dir" title="${this._sortDir === "desc" ? "Malej\u0105co" : "Rosn\u0105co"}">${this._sortDir === "desc" ? "\u2193" : "\u2191"}</button>
-          <select id="aa-time-range">
-            <option value="all" ${this._timeRange === "all" ? "selected" : ""}>Ca\u0142y czas</option>
-            <option value="1" ${this._timeRange === "1" ? "selected" : ""}>Dzi\u015B</option>
-            <option value="7" ${this._timeRange === "7" ? "selected" : ""}>7 dni</option>
-            <option value="14" ${this._timeRange === "14" ? "selected" : ""}>14 dni</option>
-            <option value="30" ${this._timeRange === "30" ? "selected" : ""}>30 dni</option>
-          </select>
-        </div>
-        <div class="filter-results-count">${filteredAutos.length} z ${allAutos.length} automatyzacji</div>
-        <div class="auto-list-full">${filteredListHtml}</div>
-      </div>
-      <div class="card">
-        <h2 class="card-title">Najaktywniejsze dzi\u015B</h2>
-        <div class="canvas-wrap">
-          <canvas id="top-automations-chart"></canvas>
-        </div>
-      </div>
-    `;
+    // Only build content for the active tab
+    if (this.currentTab === 'overview') {
+      const filteredListHtml = filteredAutos.length > 0
+        ? filteredAutos.map(a => {
+            const stateClass = a.isFailed ? "error" : a.state === "on" ? "on" : "off";
+            const timeStr = this._formatTimeSince(a.lastTriggered);
+            const execStr = typeof a.avgExecutionTime === "number" ? `${a.avgExecutionTime}ms` : "";
+            const countStr = a.todayCount > 0 ? `${a.todayCount}\u00d7` : "";
+            return `<div class="auto-item-full" data-automation-id="${a.automationId}">
+              <span class="auto-state-dot ${stateClass}"></span>
+              <span class="auto-name" title="${a.name}">${a.name}</span>
+              ${countStr ? `<span class="auto-detail" title="Dzisiejsze uruchomienia">${countStr}</span>` : ""}
+              ${execStr ? `<span class="auto-detail" title="\u015Aredni czas">${execStr}</span>` : ""}
+              <span class="auto-detail">${timeStr}</span>
+            </div>`;
+          }).join("")
+        : `<div class="empty-state">Brak automatyzacji pasuj\u0105cych do filtr\u00f3w</div>`;
 
-    // --- PERFORMANCE TAB ---
-    const hasExecData = this.executionTimes.length > 0;
-    const hasTriggerData = this.triggerTypes.size > 0;
-
-    const traceNoticeHtml = "";
-
-    const performanceContent = `
-      ${traceNoticeHtml}
-      <div class="card">
-        <h2 class="card-title">Rozk\u0142ad czas\u00f3w wykonania</h2>
-        ${hasExecData
-          ? '<div class="canvas-wrap"><canvas id="exec-dist-chart"></canvas></div>'
-          : '<div class="chart-empty">Brak danych o czasach wykonania \u2014 zbyt ma\u0142o uruchomie\u0144 z pe\u0142nymi danymi</div>'}
-      </div>
-      <div class="card">
-        <h2 class="card-title">Typy wyzwalaczy</h2>
-        ${hasTriggerData
-          ? '<div class="canvas-wrap"><canvas id="trigger-type-chart"></canvas></div>'
-          : '<div class="chart-empty">Brak danych o wyzwalaczach \u2014 konfiguracja automatyzacji niedost\u0119pna</div>'}
-      </div>
-      <div class="card">
-        <h2 class="card-title">Dzienne wykonania (14 dni)</h2>
-        <div class="canvas-wrap"><canvas id="sparkline-chart"></canvas></div>
-      </div>
-      <div class="card">
-        <h2 class="card-title">Statystyki</h2>
+      activeTabContent = `
+        <div class="health-row">
+          <div class="health-circle ${healthClass}">${healthScore}</div>
+          <div>
+            <div class="card-title">Stan systemu automatyzacji</div>
+            <div class="health-label">${healthText}</div>
+          </div>
+        </div>
         <div class="stats">
           <div class="stat">
-            <div class="stat-value">${stats.avgTime}${typeof stats.avgTime === "string" ? "" : "ms"}</div>
-            <div class="stat-label">\u015Ar. czas</div>
+            <div class="stat-value">${stats.total}</div>
+            <div class="stat-label">\u0141\u0105cznie</div>
           </div>
           <div class="stat">
-            <div class="stat-value">${this.executionTimes.length}</div>
-            <div class="stat-label">Z danymi o czasie</div>
+            <div class="stat-value">${stats.active}</div>
+            <div class="stat-label">Aktywnych</div>
           </div>
           <div class="stat">
-            <div class="stat-value">${this.triggerTypes.size}</div>
-            <div class="stat-label">Typ\u00f3w wyzwalaczy</div>
+            <div class="stat-value">${stats.disabled}</div>
+            <div class="stat-label">Wy\u0142\u0105czonych</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">${stats.failed}</div>
+            <div class="stat-label">B\u0142\u0119d\u00f3w</div>
           </div>
         </div>
-      </div>
-    `;
-
-    // --- OPTIMIZATION TAB ---
-    const optData = this.getOptimizationData();
-
-    const slowItems = optData.slow.length > 0
-      ? optData.slow.map(a => `
-          <div class="auto-item" data-automation-id="${a.automationId}">
-            <span class="auto-name" title="${a.name}">${a.name}</span>
-            <span class="badge badge-warn">${Math.round(a.avgExecutionTime)}ms</span>
-            <span class="auto-arrow">\u203A</span>
-          </div>`).join("")
-      : '<div class="empty-state">\u2705 Brak wolnych automatyzacji</div>';
-
-    const failedItems = optData.failed.length > 0
-      ? optData.failed.map(a => `
-          <div class="auto-item" data-automation-id="${a.automationId}">
-            <span class="auto-name" title="${a.name}">${a.name}</span>
-            <span class="badge badge-error">${a.reason || "b\u0142\u0105d"}</span>
-            <span class="auto-arrow">\u203A</span>
-          </div>`).join("")
-      : '<div class="empty-state">\u2705 Brak nieudanych automatyzacji</div>';
-
-    const disabledItems = optData.disabled.length > 0
-      ? optData.disabled.map(a => `
-          <div class="auto-item" data-automation-id="${a.automationId}">
-            <span class="auto-name" title="${a.name}">${a.name}</span>
-            <span class="badge badge-info">wy\u0142\u0105czona</span>
-            <button class="toggle-btn" data-entity-id="${a.id}" data-action="enable">W\u0142\u0105cz</button>
-            <span class="auto-arrow">\u203A</span>
-          </div>`).join("")
-      : '<div class="empty-state">\u2705 Brak wy\u0142\u0105czonych automatyzacji</div>';
-
-    const staleItems = optData.stale.length > 0
-      ? optData.stale.map(a => `
-          <div class="auto-item" data-automation-id="${a.automationId}">
-            <span class="auto-name" title="${a.name}">${a.name}</span>
-            <span class="badge badge-stale">${this._formatTimeSince(a.lastTriggered)}</span>
-            <span class="auto-arrow">\u203A</span>
-          </div>`).join("")
-      : '<div class="empty-state">\u2705 Wszystkie automatyzacje by\u0142y ostatnio aktywne</div>';
-
-    const optimizationContent = `
-      <div class="opt-summary">
-        <div class="opt-stat warn">
-          <div class="opt-stat-value">${optData.slow.length}</div>
-          <div class="opt-stat-label">Wolnych (&gt;800ms)</div>
+        <div class="card" style="margin-top:var(--aa-space-4)">
+          <h2 class="card-title">Automatyzacje</h2>
+          <div class="filter-bar">
+            <input type="text" id="aa-filter-input" placeholder="Szukaj automatyzacji\u2026" value="${this._filterText.replace(/"/g, "&quot;")}">
+            <select id="aa-sort-select">
+              <option value="lastTriggered" ${this._sortBy === "lastTriggered" ? "selected" : ""}>Ostatnie uruchomienie</option>
+              <option value="name" ${this._sortBy === "name" ? "selected" : ""}>Nazwa</option>
+              <option value="todayCount" ${this._sortBy === "todayCount" ? "selected" : ""}>Uruchomienia dzi\u015B</option>
+              <option value="avgTime" ${this._sortBy === "avgTime" ? "selected" : ""}>Czas wykonania</option>
+              <option value="state" ${this._sortBy === "state" ? "selected" : ""}>Stan</option>
+            </select>
+            <button class="sort-dir-btn" id="aa-sort-dir" title="${this._sortDir === "desc" ? "Malej\u0105co" : "Rosn\u0105co"}">${this._sortDir === "desc" ? "\u2193" : "\u2191"}</button>
+            <select id="aa-time-range">
+              <option value="all" ${this._timeRange === "all" ? "selected" : ""}>Ca\u0142y czas</option>
+              <option value="1" ${this._timeRange === "1" ? "selected" : ""}>Dzi\u015B</option>
+              <option value="7" ${this._timeRange === "7" ? "selected" : ""}>7 dni</option>
+              <option value="14" ${this._timeRange === "14" ? "selected" : ""}>14 dni</option>
+              <option value="30" ${this._timeRange === "30" ? "selected" : ""}>30 dni</option>
+            </select>
+          </div>
+          <div class="filter-results-count">${filteredAutos.length} z ${allAutos.length} automatyzacji</div>
+          <div class="auto-list-full">${filteredListHtml}</div>
         </div>
-        <div class="opt-stat error">
-          <div class="opt-stat-value">${optData.failed.length}</div>
-          <div class="opt-stat-label">Z b\u0142\u0119dami</div>
+        <div class="card">
+          <h2 class="card-title">Najaktywniejsze dzi\u015B</h2>
+          <div class="canvas-wrap">
+            <canvas id="top-automations-chart"></canvas>
+          </div>
         </div>
-        <div class="opt-stat info">
-          <div class="opt-stat-value">${optData.disabled.length}</div>
-          <div class="opt-stat-label">Wy\u0142\u0105czonych</div>
+      `;
+    } else if (this.currentTab === 'performance') {
+      const hasExecData = this.executionTimes.length > 0;
+      const hasTriggerData = this.triggerTypes.size > 0;
+
+      activeTabContent = `
+        <div class="card">
+          <h2 class="card-title">Rozk\u0142ad czas\u00f3w wykonania</h2>
+          ${hasExecData
+            ? '<div class="canvas-wrap"><canvas id="exec-dist-chart"></canvas></div>'
+            : '<div class="chart-empty">Brak danych o czasach wykonania \u2014 zbyt ma\u0142o uruchomie\u0144 z pe\u0142nymi danymi</div>'}
         </div>
-        <div class="opt-stat stale">
-          <div class="opt-stat-value">${optData.stale.length}</div>
-          <div class="opt-stat-label">Nieaktywnych (&gt;30d)</div>
+        <div class="card">
+          <h2 class="card-title">Typy wyzwalaczy</h2>
+          ${hasTriggerData
+            ? '<div class="canvas-wrap"><canvas id="trigger-type-chart"></canvas></div>'
+            : '<div class="chart-empty">Brak danych o wyzwalaczach \u2014 konfiguracja automatyzacji niedost\u0119pna</div>'}
         </div>
-      </div>
-      <div class="opt-section">
-        <h2 class="card-title">\u26A0\uFE0F Wolne automatyzacje (&gt;800ms)</h2>
-        <div class="auto-list">${slowItems}</div>
-      </div>
-      <div class="opt-section">
-        <h2 class="card-title">\u274C Automatyzacje z b\u0142\u0119dami</h2>
-        <div class="auto-list">${failedItems}</div>
-      </div>
-      <div class="opt-section">
-        <h2 class="card-title">\u23F8\uFE0F Wy\u0142\u0105czone automatyzacje</h2>
-        <div class="auto-list">${disabledItems}</div>
-      </div>
-      <div class="opt-section">
-        <h2 class="card-title">\uD83D\uDCA4 Nieaktywne automatyzacje (&gt;30 dni)</h2>
-        <div class="auto-list">${staleItems}</div>
-      </div>
-    `;
+        <div class="card">
+          <h2 class="card-title">Dzienne wykonania (14 dni)</h2>
+          <div class="canvas-wrap"><canvas id="sparkline-chart"></canvas></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">Statystyki</h2>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-value">${stats.avgTime}${typeof stats.avgTime === "string" ? "" : "ms"}</div>
+              <div class="stat-label">\u015Ar. czas</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${this.executionTimes.length}</div>
+              <div class="stat-label">Z danymi o czasie</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${this.triggerTypes.size}</div>
+              <div class="stat-label">Typ\u00f3w wyzwalaczy</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (this.currentTab === 'optimization') {
+      const optData = this.getOptimizationData();
+
+      const slowItems = optData.slow.length > 0
+        ? optData.slow.map(a => `
+            <div class="auto-item" data-automation-id="${a.automationId}">
+              <span class="auto-name" title="${a.name}">${a.name}</span>
+              <span class="badge badge-warn">${Math.round(a.avgExecutionTime)}ms</span>
+              <span class="auto-arrow">\u203A</span>
+            </div>`).join("")
+        : '<div class="empty-state">\u2705 Brak wolnych automatyzacji</div>';
+
+      const failedItems = optData.failed.length > 0
+        ? optData.failed.map(a => `
+            <div class="auto-item" data-automation-id="${a.automationId}">
+              <span class="auto-name" title="${a.name}">${a.name}</span>
+              <span class="badge badge-error">${a.reason || "b\u0142\u0105d"}</span>
+              <span class="auto-arrow">\u203A</span>
+            </div>`).join("")
+        : '<div class="empty-state">\u2705 Brak nieudanych automatyzacji</div>';
+
+      const disabledItems = optData.disabled.length > 0
+        ? optData.disabled.map(a => `
+            <div class="auto-item" data-automation-id="${a.automationId}">
+              <span class="auto-name" title="${a.name}">${a.name}</span>
+              <span class="badge badge-info">wy\u0142\u0105czona</span>
+              <button class="toggle-btn" data-entity-id="${a.id}" data-action="enable">W\u0142\u0105cz</button>
+              <span class="auto-arrow">\u203A</span>
+            </div>`).join("")
+        : '<div class="empty-state">\u2705 Brak wy\u0142\u0105czonych automatyzacji</div>';
+
+      const staleItems = optData.stale.length > 0
+        ? optData.stale.map(a => `
+            <div class="auto-item" data-automation-id="${a.automationId}">
+              <span class="auto-name" title="${a.name}">${a.name}</span>
+              <span class="badge badge-stale">${this._formatTimeSince(a.lastTriggered)}</span>
+              <span class="auto-arrow">\u203A</span>
+            </div>`).join("")
+        : '<div class="empty-state">\u2705 Wszystkie automatyzacje by\u0142y ostatnio aktywne</div>';
+
+      activeTabContent = `
+        <div class="opt-summary">
+          <div class="opt-stat warn">
+            <div class="opt-stat-value">${optData.slow.length}</div>
+            <div class="opt-stat-label">Wolnych (&gt;800ms)</div>
+          </div>
+          <div class="opt-stat error">
+            <div class="opt-stat-value">${optData.failed.length}</div>
+            <div class="opt-stat-label">Z b\u0142\u0119dami</div>
+          </div>
+          <div class="opt-stat info">
+            <div class="opt-stat-value">${optData.disabled.length}</div>
+            <div class="opt-stat-label">Wy\u0142\u0105czonych</div>
+          </div>
+          <div class="opt-stat stale">
+            <div class="opt-stat-value">${optData.stale.length}</div>
+            <div class="opt-stat-label">Nieaktywnych (&gt;30d)</div>
+          </div>
+        </div>
+        <div class="opt-section">
+          <h2 class="card-title">\u26A0\uFE0F Wolne automatyzacje (&gt;800ms)</h2>
+          <div class="auto-list">${slowItems}</div>
+        </div>
+        <div class="opt-section">
+          <h2 class="card-title">\u274C Automatyzacje z b\u0142\u0119dami</h2>
+          <div class="auto-list">${failedItems}</div>
+        </div>
+        <div class="opt-section">
+          <h2 class="card-title">\u23F8\uFE0F Wy\u0142\u0105czone automatyzacje</h2>
+          <div class="auto-list">${disabledItems}</div>
+        </div>
+        <div class="opt-section">
+          <h2 class="card-title">\uD83D\uDCA4 Nieaktywne automatyzacje (&gt;30 dni)</h2>
+          <div class="auto-list">${staleItems}</div>
+        </div>
+      `;
+    }
 
     const loadingContent = `
       <div class="loading-state">
@@ -1227,9 +1227,7 @@ class HAAutomationAnalyzer extends HTMLElement {
       ? loadingContent
       : `
         ${loadingToast}
-        <div class="tab-content ${this.currentTab === "overview" ? "active" : ""}">${overviewContent}</div>
-        <div class="tab-content ${this.currentTab === "performance" ? "active" : ""}">${performanceContent}</div>
-        <div class="tab-content ${this.currentTab === "optimization" ? "active" : ""}">${optimizationContent}</div>
+        <div class="tab-content active">${activeTabContent}</div>
       `;
 
     this.shadowRoot.innerHTML = `

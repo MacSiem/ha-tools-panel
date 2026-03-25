@@ -308,7 +308,6 @@ class HAToolsPanel extends HTMLElement {
   static get CSS() {
     return `
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-bg: #F8FAFC;
@@ -946,7 +945,6 @@ class HAToolsPanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
 /* ===== BENTO LIGHT MODE DESIGN SYSTEM ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-primary: #3B82F6;

@@ -715,7 +715,6 @@ class HAVacuumWaterMonitor extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         :host { display: block; font-family: Inter, sans-serif; }
         .card { background: #1a1a2e; border-radius: 16px; padding: 16px; color: white; }
         .card-title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.75); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
@@ -852,7 +851,6 @@ class HAVacuumWaterMonitor extends HTMLElement {
     // Show error with tip banner
     this.shadowRoot.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         :host { display: block; font-family: 'Inter', sans-serif; color: var(--primary-text-color, #1a1a2e); }
         .err-container { max-width: 700px; margin: 30px auto; padding: 20px; }
         .err-card { background: rgba(239,68,68,0.05); border: 1.5px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }

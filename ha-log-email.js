@@ -448,7 +448,6 @@ class HALogEmail extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         :host {
           --bg: #F8FAFC; --card: #FFFFFF; --border: #E2E8F0;
           --text: #1E293B; --text2: #64748B; --text3: #94A3B8;

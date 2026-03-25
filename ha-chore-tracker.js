@@ -99,7 +99,6 @@ class HaChoreTracker extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
 /* ===== BENTO LIGHT MODE DESIGN SYSTEM ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-primary: #3B82F6;
@@ -668,7 +667,6 @@ canvas {
       
 /* === Modern Bento Light Mode === */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-bg: #F8FAFC;
@@ -964,12 +962,13 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
         </div>
 
         <div class="tabs">
-          <button class="tab-btn active" data-tab="board">📋 Board</button>
-          <button class="tab-btn" data-tab="schedule">📅 Schedule</button>
-          <button class="tab-btn" data-tab="stats">🏆 Stats</button>
+          <button class="tab-btn ${this.activeTab === 'board' ? 'active' : ''}" data-tab="board">📋 Board</button>
+          <button class="tab-btn ${this.activeTab === 'schedule' ? 'active' : ''}" data-tab="schedule">📅 Schedule</button>
+          <button class="tab-btn ${this.activeTab === 'stats' ? 'active' : ''}" data-tab="stats">🏆 Stats</button>
         </div>
 
         <!-- Board Tab -->
+        ${this.activeTab === 'board' ? `
         <div class="tab-content active" id="board-tab">
           <div class="add-form">
             <div class="form-group full">
@@ -1041,23 +1040,28 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
             </div>
           </div>
         </div>
+        ` : ''}
 
         <!-- Schedule Tab -->
-        <div class="tab-content" id="schedule-tab">
+        ${this.activeTab === 'schedule' ? `
+        <div class="tab-content active" id="schedule-tab">
           <div class="schedule" id="schedule"></div>
           <div id="empty-schedule" class="empty-state" style="display:none;">
             📭 No chores scheduled yet. Add chores to see the weekly schedule.
           </div>
         </div>
+        ` : ''}
 
         <!-- Stats Tab -->
-        <div class="tab-content" id="stats-tab">
+        ${this.activeTab === 'stats' ? `
+        <div class="tab-content active" id="stats-tab">
           <div class="stats-container" id="stats-container"></div>
           <div class="leaderboard" id="leaderboard"></div>
           <div id="empty-stats" class="empty-state" style="display:none;">
             📊 No statistics available yet. Complete chores to see stats.
           </div>
         </div>
+        ` : ''}
       </div>
     `;
 

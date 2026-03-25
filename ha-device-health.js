@@ -907,267 +907,275 @@ class HADeviceHealth extends HTMLElement {
     `;
 
     // Devices Tab
-    const filteredDevices = devices.filter(
-      (d) => (this._deviceFilter === "all" || d.status === this._deviceFilter) &&
-              d.name.toLowerCase().includes(this._searchQuery.toLowerCase())
-    );
+    if (this._activeTab === "devices") {
+      const filteredDevices = devices.filter(
+        (d) => (this._deviceFilter === "all" || d.status === this._deviceFilter) &&
+                d.name.toLowerCase().includes(this._searchQuery.toLowerCase())
+      );
 
-    // Reset to page 1 when search/filter changes
-    const totalPages = Math.ceil(filteredDevices.length / this._pageSize) || 1;
-    if (this._currentPage > totalPages) {
-      this._currentPage = 1;
+      // Reset to page 1 when search/filter changes
+      const totalPages = Math.ceil(filteredDevices.length / this._pageSize) || 1;
+      if (this._currentPage > totalPages) {
+        this._currentPage = 1;
+      }
+
+      const startIdx = (this._currentPage - 1) * this._pageSize;
+      const endIdx = startIdx + this._pageSize;
+      const paginatedDevices = filteredDevices.slice(startIdx, endIdx);
+
+      html += `
+        <div class="tab-content active">
+          <div class="controls">
+            <div class="control-group">
+              <input type="text" class="search-box" placeholder="${this._t('searchDevices')}" value="${this._searchQuery}">
+            </div>
+            <div class="control-group">
+              <select class="filter-status">
+                <option value="all" ${this._deviceFilter === 'all' ? 'selected' : ''}>${this._t('all')}</option>
+                <option value="online" ${this._deviceFilter === 'online' ? 'selected' : ''}>${this._t('online')}</option>
+                <option value="offline" ${this._deviceFilter === 'offline' ? 'selected' : ''}>${this._t('offline')}</option>
+                <option value="unavailable" ${this._deviceFilter === 'unavailable' ? 'selected' : ''}>${this._t('unavailable')}</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <button class="toggle-grouping ${this._groupByDomain ? 'active' : ''}">${this._t('toggleGrouping')}</button>
+            </div>
+            <div class="control-group">
+              <select class="page-size-selector" data-tab="devices">
+                ${[15,30,50,100].map(n => `<option value="${n}" ${this._pageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="stats">
+            ${this._t('totalDevices')}: ${devices.length} | ${this._t('online')}: ${online} | ${this._t('availability')}: ${availability}%
+          </div>
+          <table class="device-table">
+            <thead>
+              <tr>
+                <th data-sort="name">${this._t('name')}</th>
+                <th>${this._t('type')}</th>
+                <th>${this._t('status')}</th>
+                <th>${this._t('lastSeen')}</th>
+                <th>${this._t('uptime')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paginatedDevices
+                .map(
+                  (device) =>
+                    `<tr>
+                      <td>${device.name}</td>
+                      <td>${device.type}</td>
+                      <td><span class="status-badge status-${device.status}">${device.status.toUpperCase()}</span></td>
+                      <td>${new Date(device.lastSeen).toLocaleString()}</td>
+                      <td>${device.uptime}</td>
+                    </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <div class="pagination">
+            <button class="pagination-btn pagination-prev" ${this._currentPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
+            <span class="pagination-info">${this._t('page')} ${this._currentPage} ${this._t('of')} ${totalPages}</span>
+            <button class="pagination-btn pagination-next" ${this._currentPage === totalPages ? 'disabled' : ''}>${this._t('next')}</button>
+          </div>
+        </div>
+      `;
     }
-
-    const startIdx = (this._currentPage - 1) * this._pageSize;
-    const endIdx = startIdx + this._pageSize;
-    const paginatedDevices = filteredDevices.slice(startIdx, endIdx);
-
-    html += `
-      <div class="tab-content ${this._activeTab === "devices" ? "active" : ""}">
-        <div class="controls">
-          <div class="control-group">
-            <input type="text" class="search-box" placeholder="${this._t('searchDevices')}" value="${this._searchQuery}">
-          </div>
-          <div class="control-group">
-            <select class="filter-status">
-              <option value="all" ${this._deviceFilter === 'all' ? 'selected' : ''}>${this._t('all')}</option>
-              <option value="online" ${this._deviceFilter === 'online' ? 'selected' : ''}>${this._t('online')}</option>
-              <option value="offline" ${this._deviceFilter === 'offline' ? 'selected' : ''}>${this._t('offline')}</option>
-              <option value="unavailable" ${this._deviceFilter === 'unavailable' ? 'selected' : ''}>${this._t('unavailable')}</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <button class="toggle-grouping ${this._groupByDomain ? 'active' : ''}">${this._t('toggleGrouping')}</button>
-          </div>
-          <div class="control-group">
-            <select class="page-size-selector" data-tab="devices">
-              ${[15,30,50,100].map(n => `<option value="${n}" ${this._pageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div class="stats">
-          ${this._t('totalDevices')}: ${devices.length} | ${this._t('online')}: ${online} | ${this._t('availability')}: ${availability}%
-        </div>
-        <table class="device-table">
-          <thead>
-            <tr>
-              <th data-sort="name">${this._t('name')}</th>
-              <th>${this._t('type')}</th>
-              <th>${this._t('status')}</th>
-              <th>${this._t('lastSeen')}</th>
-              <th>${this._t('uptime')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paginatedDevices
-              .map(
-                (device) =>
-                  `<tr>
-                    <td>${device.name}</td>
-                    <td>${device.type}</td>
-                    <td><span class="status-badge status-${device.status}">${device.status.toUpperCase()}</span></td>
-                    <td>${new Date(device.lastSeen).toLocaleString()}</td>
-                    <td>${device.uptime}</td>
-                  </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-        <div class="pagination">
-          <button class="pagination-btn pagination-prev" ${this._currentPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
-          <span class="pagination-info">${this._t('page')} ${this._currentPage} ${this._t('of')} ${totalPages}</span>
-          <button class="pagination-btn pagination-next" ${this._currentPage === totalPages ? 'disabled' : ''}>${this._t('next')}</button>
-        </div>
-      </div>
-    `;
 
     // Batteries Tab
-    const batteryDevicesByHealth = [...batteries].sort((a, b) => {
-      if (this._batterySortBy === "level") return a.level - b.level;
-      if (this._batterySortBy === "name") return a.name.localeCompare(b.name);
-      return 0;
-    });
+    if (this._activeTab === "batteries") {
+      const batteryDevicesByHealth = [...batteries].sort((a, b) => {
+        if (this._batterySortBy === "level") return a.level - b.level;
+        if (this._batterySortBy === "name") return a.name.localeCompare(b.name);
+        return 0;
+      });
 
-    const batteryTotalPages = Math.ceil(batteryDevicesByHealth.length / this._batteryPageSize) || 1;
-    if (this._batteryPage > batteryTotalPages) this._batteryPage = 1;
-    const batteryStart = (this._batteryPage - 1) * this._batteryPageSize;
-    const paginatedBatteries = batteryDevicesByHealth.slice(batteryStart, batteryStart + this._batteryPageSize);
+      const batteryTotalPages = Math.ceil(batteryDevicesByHealth.length / this._batteryPageSize) || 1;
+      if (this._batteryPage > batteryTotalPages) this._batteryPage = 1;
+      const batteryStart = (this._batteryPage - 1) * this._batteryPageSize;
+      const paginatedBatteries = batteryDevicesByHealth.slice(batteryStart, batteryStart + this._batteryPageSize);
 
-    html += `
-      <div class="tab-content ${this._activeTab === "batteries" ? "active" : ""}">
-        <div class="controls">
-          <div class="control-group">
-            <select class="battery-sort">
-              <option value="level" ${this._batterySortBy === 'level' ? 'selected' : ''}>${this._t('levelWorstFirst')}</option>
-              <option value="name" ${this._batterySortBy === 'name' ? 'selected' : ''}>${this._t('name')}</option>
-            </select>
+      html += `
+        <div class="tab-content active">
+          <div class="controls">
+            <div class="control-group">
+              <select class="battery-sort">
+                <option value="level" ${this._batterySortBy === 'level' ? 'selected' : ''}>${this._t('levelWorstFirst')}</option>
+                <option value="name" ${this._batterySortBy === 'name' ? 'selected' : ''}>${this._t('name')}</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <select class="page-size-selector" data-tab="batteries">
+                ${[15,30,50,100].map(n => `<option value="${n}" ${this._batteryPageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
+              </select>
+            </div>
           </div>
-          <div class="control-group">
-            <select class="page-size-selector" data-tab="batteries">
-              ${[15,30,50,100].map(n => `<option value="${n}" ${this._batteryPageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
-            </select>
+          <div class="stats">
+            ${this._t('batteryHealthSummary')}: ${batteryNeedingAttention} ${this._t('deviceNeedAttention')}
           </div>
-        </div>
-        <div class="stats">
-          ${this._t('batteryHealthSummary')}: ${batteryNeedingAttention} ${this._t('deviceNeedAttention')}
-        </div>
-        <div class="battery-grid">
-          ${paginatedBatteries
-            .map(
-              (battery) => {
-                const color = this._getBatteryColor(battery.level);
-                return `
-                  <div class="battery-card">
-                    <div style="font-size: 20px; margin-bottom: 6px;">🔋</div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--tc);">${battery.name}</div>
-                    <div class="battery-bar">
-                      <div class="battery-fill" style="width: ${battery.level}%; background: ${color};"></div>
+          <div class="battery-grid">
+            ${paginatedBatteries
+              .map(
+                (battery) => {
+                  const color = this._getBatteryColor(battery.level);
+                  return `
+                    <div class="battery-card">
+                      <div style="font-size: 20px; margin-bottom: 6px;">🔋</div>
+                      <div style="font-size: 13px; font-weight: 600; color: var(--tc);">${battery.name}</div>
+                      <div class="battery-bar">
+                        <div class="battery-fill" style="width: ${battery.level}%; background: ${color};"></div>
+                      </div>
+                      <div style="font-size: 16px; font-weight: 700; color: ${color};">${battery.level}%</div>
+                      <div class="battery-label">${this._t('lastChanged')}: ${new Date(battery.lastChanged).toLocaleDateString()}</div>
                     </div>
-                    <div style="font-size: 16px; font-weight: 700; color: ${color};">${battery.level}%</div>
-                    <div class="battery-label">${this._t('lastChanged')}: ${new Date(battery.lastChanged).toLocaleDateString()}</div>
-                  </div>
-                `;
-              }
-            )
-            .join("")}
-        </div>
-        ${batteryDevicesByHealth.length > this._batteryPageSize ? `
-        <div class="pagination">
-          <button class="pagination-btn bat-prev" ${this._batteryPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
-          <span class="pagination-info">${this._t('page')} ${this._batteryPage} ${this._t('of')} ${batteryTotalPages}</span>
-          <button class="pagination-btn bat-next" ${this._batteryPage === batteryTotalPages ? 'disabled' : ''}>${this._t('next')}</button>
-        </div>` : ''}
-      </div>
-    `;
-
-    // Network Tab
-    const protocolCounts = {};
-    let totalNetDevices = 0;
-    const allNetDevices = [];
-    Object.keys(networks).forEach((protocol) => {
-      protocolCounts[protocol] = networks[protocol].length;
-      totalNetDevices += networks[protocol].length;
-      networks[protocol].forEach(d => allNetDevices.push({ ...d, protocol }));
-    });
-
-    const netTotalPages = Math.ceil(allNetDevices.length / this._networkPageSize) || 1;
-    if (this._networkPage > netTotalPages) this._networkPage = 1;
-    const netStart = (this._networkPage - 1) * this._networkPageSize;
-    const paginatedNet = allNetDevices.slice(netStart, netStart + this._networkPageSize);
-
-    html += `
-      <div class="tab-content ${this._activeTab === "network" ? "active" : ""}">
-        <div class="controls">
-          <div class="control-group">
-            <select class="page-size-selector" data-tab="network">
-              ${[15,30,50,100].map(n => `<option value="${n}" ${this._networkPageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
-            </select>
+                  `;
+                }
+              )
+              .join("")}
           </div>
-        </div>
-        <div class="network-stats">
-    `;
-
-    Object.keys(protocolCounts).forEach((protocol) => {
-      html += `
-        <div class="network-stat">
-          <div class="network-stat-value">${protocolCounts[protocol]}</div>
-          <div class="network-stat-label">${protocol} ${this._t('networkDevices')}</div>
-        </div>
-      `;
-    });
-
-    html += `
-        </div>
-        <canvas id="signal-chart" width="400" height="250"></canvas>
-    `;
-
-    // Group paginated devices by protocol for display
-    let lastProto = '';
-    paginatedNet.forEach((device) => {
-      if (device.protocol !== lastProto) {
-        lastProto = device.protocol;
-        html += `<div class="section-title">${device.protocol} Network</div>`;
-      }
-      const hasRssi = device.rssi !== null && device.rssi !== undefined && !isNaN(device.rssi);
-      const color = hasRssi ? this._getSignalColor(device.rssi) : '#94a3b8';
-      const strength = hasRssi ? Math.max(0, Math.min(100, ((device.rssi + 100) / 50) * 100)) : 0;
-
-      // Build detail line with MAC/IP/SSID
-      const details = [];
-      if (device.mac) details.push('<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:3px;">' + device.mac + '</code>');
-      if (device.ip) details.push('IP: ' + device.ip);
-      if (device.ssid) details.push('\u{1F4F6} ' + device.ssid);
-      if (device.connectionType) details.push(device.connectionType);
-
-      html += `
-        <div style="margin-bottom: 10px; padding: 8px; border: 1px solid var(--dc); border-radius: 8px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:13px;font-weight:600;color:var(--tc);">${device.name}</span>
-            ${hasRssi ? '<span style="font-size:12px;color:' + color + ';font-weight:500;">' + device.rssi + ' dBm</span>' : ''}
-          </div>
-          ${details.length > 0 ? '<div style="font-size:11px;color:var(--ts);display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">' + details.join(' &middot; ') + '</div>' : ''}
-          ${hasRssi ? '<div class="rssi-bar"><div class="rssi-indicator"><div class="rssi-fill" style="width:' + strength + '%;background:' + color + ';"></div></div></div>' : ''}
-        </div>
-      `;
-    });
-
-    if (allNetDevices.length > this._networkPageSize) {
-      html += `
-        <div class="pagination">
-          <button class="pagination-btn net-prev" ${this._networkPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
-          <span class="pagination-info">${this._t('page')} ${this._networkPage} ${this._t('of')} ${netTotalPages}</span>
-          <button class="pagination-btn net-next" ${this._networkPage === netTotalPages ? 'disabled' : ''}>${this._t('next')}</button>
+          ${batteryDevicesByHealth.length > this._batteryPageSize ? `
+          <div class="pagination">
+            <button class="pagination-btn bat-prev" ${this._batteryPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
+            <span class="pagination-info">${this._t('page')} ${this._batteryPage} ${this._t('of')} ${batteryTotalPages}</span>
+            <button class="pagination-btn bat-next" ${this._batteryPage === batteryTotalPages ? 'disabled' : ''}>${this._t('next')}</button>
+          </div>` : ''}
         </div>
       `;
     }
 
-    html += `
-      </div>
-    `;
+    // Network Tab
+    if (this._activeTab === "network") {
+      const protocolCounts = {};
+      let totalNetDevices = 0;
+      const allNetDevices = [];
+      Object.keys(networks).forEach((protocol) => {
+        protocolCounts[protocol] = networks[protocol].length;
+        totalNetDevices += networks[protocol].length;
+        networks[protocol].forEach(d => allNetDevices.push({ ...d, protocol }));
+      });
 
-    // Alerts Tab
-    html += `
-      <div class="tab-content ${this._activeTab === "alerts" ? "active" : ""}">
-        <div class="stats">
-          ${this._t('activeAlerts')}: ${this._alerts.length}
-        </div>
-    `;
+      const netTotalPages = Math.ceil(allNetDevices.length / this._networkPageSize) || 1;
+      if (this._networkPage > netTotalPages) this._networkPage = 1;
+      const netStart = (this._networkPage - 1) * this._networkPageSize;
+      const paginatedNet = allNetDevices.slice(netStart, netStart + this._networkPageSize);
 
-    if (this._alerts.length === 0) {
-      html += `<div class="empty-state">${this._t('noActiveAlerts')}</div>`;
-    } else {
-      this._alerts.forEach((alert) => {
-        const alertId = `${alert.type}_${alert.id}`;
+      html += `
+        <div class="tab-content active">
+          <div class="controls">
+            <div class="control-group">
+              <select class="page-size-selector" data-tab="network">
+                ${[15,30,50,100].map(n => `<option value="${n}" ${this._networkPageSize === n ? 'selected' : ''}>${n} ${this._t('itemsPerPage')}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="network-stats">
+      `;
+
+      Object.keys(protocolCounts).forEach((protocol) => {
         html += `
-          <div class="alert-item alert-${alert.severity}">
-            <div class="alert-text">
-              <div class="alert-type">${alert.type.toUpperCase().replace(/_/g, " ")}</div>
-              <div>${alert.name}</div>
-              <div class="alert-time">${new Date(alert.timestamp).toLocaleString()}</div>
-            </div>
-            <div class="alert-actions">
-              <button class="alert-dismiss" data-alert-id="${alertId}">${this._t('dismiss')}</button>
-            </div>
+          <div class="network-stat">
+            <div class="network-stat-value">${protocolCounts[protocol]}</div>
+            <div class="network-stat-label">${protocol} ${this._t('networkDevices')}</div>
           </div>
         `;
       });
+
+      html += `
+          </div>
+          <canvas id="signal-chart" width="400" height="250"></canvas>
+      `;
+
+      // Group paginated devices by protocol for display
+      let lastProto = '';
+      paginatedNet.forEach((device) => {
+        if (device.protocol !== lastProto) {
+          lastProto = device.protocol;
+          html += `<div class="section-title">${device.protocol} Network</div>`;
+        }
+        const hasRssi = device.rssi !== null && device.rssi !== undefined && !isNaN(device.rssi);
+        const color = hasRssi ? this._getSignalColor(device.rssi) : '#94a3b8';
+        const strength = hasRssi ? Math.max(0, Math.min(100, ((device.rssi + 100) / 50) * 100)) : 0;
+
+        // Build detail line with MAC/IP/SSID
+        const details = [];
+        if (device.mac) details.push('<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:3px;">' + device.mac + '</code>');
+        if (device.ip) details.push('IP: ' + device.ip);
+        if (device.ssid) details.push('\u{1F4F6} ' + device.ssid);
+        if (device.connectionType) details.push(device.connectionType);
+
+        html += `
+          <div style="margin-bottom: 10px; padding: 8px; border: 1px solid var(--dc); border-radius: 8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:600;color:var(--tc);">${device.name}</span>
+              ${hasRssi ? '<span style="font-size:12px;color:' + color + ';font-weight:500;">' + device.rssi + ' dBm</span>' : ''}
+            </div>
+            ${details.length > 0 ? '<div style="font-size:11px;color:var(--ts);display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">' + details.join(' &middot; ') + '</div>' : ''}
+            ${hasRssi ? '<div class="rssi-bar"><div class="rssi-indicator"><div class="rssi-fill" style="width:' + strength + '%;background:' + color + ';"></div></div></div>' : ''}
+          </div>
+        `;
+      });
+
+      if (allNetDevices.length > this._networkPageSize) {
+        html += `
+          <div class="pagination">
+            <button class="pagination-btn net-prev" ${this._networkPage === 1 ? 'disabled' : ''}>${this._t('previous')}</button>
+            <span class="pagination-info">${this._t('page')} ${this._networkPage} ${this._t('of')} ${netTotalPages}</span>
+            <button class="pagination-btn net-next" ${this._networkPage === netTotalPages ? 'disabled' : ''}>${this._t('next')}</button>
+          </div>
+        `;
+      }
+
+      html += `
+        </div>
+      `;
     }
 
-    html += `
-      <div class="section-title">${this._t('alertHistory')}</div>
-      ${this._alertHistory
-        .slice(0, 20)
-        .map(
-          (alert) =>
-            `<div style="padding: 8px 12px; border-left: 3px solid; border-color: ${alert.severity === "critical" ? "var(--ec)" : alert.severity === "warning" ? "var(--wc)" : "var(--pc)"}; margin-bottom: 4px; border-radius: var(--radius-xs); background: var(--bg);">
-              <div style="font-size: 12px; font-weight: 500; color: var(--tc);">${alert.type.replace(/_/g, ' ')} — ${alert.name}</div>
-              <div style="font-size: 11px; color: var(--ts); margin-top: 2px;">${new Date(alert.timestamp).toLocaleString()}</div>
-            </div>`
-        )
-        .join("")}
-    </div>
-    </div>
-    `;
+    // Alerts Tab
+    if (this._activeTab === "alerts") {
+      html += `
+        <div class="tab-content active">
+          <div class="stats">
+            ${this._t('activeAlerts')}: ${this._alerts.length}
+          </div>
+      `;
+
+      if (this._alerts.length === 0) {
+        html += `<div class="empty-state">${this._t('noActiveAlerts')}</div>`;
+      } else {
+        this._alerts.forEach((alert) => {
+          const alertId = `${alert.type}_${alert.id}`;
+          html += `
+            <div class="alert-item alert-${alert.severity}">
+              <div class="alert-text">
+                <div class="alert-type">${alert.type.toUpperCase().replace(/_/g, " ")}</div>
+                <div>${alert.name}</div>
+                <div class="alert-time">${new Date(alert.timestamp).toLocaleString()}</div>
+              </div>
+              <div class="alert-actions">
+                <button class="alert-dismiss" data-alert-id="${alertId}">${this._t('dismiss')}</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      html += `
+        <div class="section-title">${this._t('alertHistory')}</div>
+        ${this._alertHistory
+          .slice(0, 20)
+          .map(
+            (alert) =>
+              `<div style="padding: 8px 12px; border-left: 3px solid; border-color: ${alert.severity === "critical" ? "var(--ec)" : alert.severity === "warning" ? "var(--wc)" : "var(--pc)"}; margin-bottom: 4px; border-radius: var(--radius-xs); background: var(--bg);">
+                <div style="font-size: 12px; font-weight: 500; color: var(--tc);">${alert.type.replace(/_/g, ' ')} — ${alert.name}</div>
+                <div style="font-size: 11px; color: var(--ts); margin-top: 2px;">${new Date(alert.timestamp).toLocaleString()}</div>
+              </div>`
+          )
+          .join("")}
+      </div>
+        </div>
+      `;
+    }
 
     this.shadowRoot.innerHTML = `<style>${style}</style>${html}`;
     this._attachEventListeners();
