@@ -1,7 +1,7 @@
 /**
  * HA Log Email Card v1.0
  * Send periodic email summaries of HA errors and warnings.
- * Part of HA Tools Panel â€” Smart Reports
+ * Part of HA Tools Panel — Smart Reports
  * Author: Jeff (AI) for MacSiem
  */
 
@@ -242,7 +242,7 @@ class HALogEmail extends HTMLElement {
           </div>
           <div class="stat-card">
             <div class="stat-icon">\uD83D\uDCDD</div>
-            <div class="stat-value">${data ? (data.total || totalErrors + totalWarnings) : 'â€”'}</div>
+            <div class="stat-value">${data ? (data.total || totalErrors + totalWarnings) : '—'}</div>
             <div class="stat-label">Total entries</div>
           </div>
           <div class="stat-card">
@@ -263,7 +263,7 @@ class HALogEmail extends HTMLElement {
             <div class="log-entry error-entry">
               <span class="log-time">${e.when ? new Date(e.when).toLocaleTimeString('pl-PL') : 'unknown'}</span>
               <span class="log-domain error-domain">${e.domain || 'unknown'}</span>
-              <span class="log-msg">${(e.message || '').substring(0, 100)}${(e.message || '').length > 100 ? 'â€¦' : ''}</span>
+              <span class="log-msg">${(e.message || '').substring(0, 100)}${(e.message || '').length > 100 ? '…' : ''}</span>
             </div>
           `).join('')
         }
@@ -275,7 +275,7 @@ class HALogEmail extends HTMLElement {
             <div class="log-entry warn-entry">
               <span class="log-time">${e.when ? new Date(e.when).toLocaleTimeString('pl-PL') : 'unknown'}</span>
               <span class="log-domain warn-domain">${e.domain || 'unknown'}</span>
-              <span class="log-msg">${(e.message || '').substring(0, 100)}${(e.message || '').length > 100 ? 'â€¦' : ''}</span>
+              <span class="log-msg">${(e.message || '').substring(0, 100)}${(e.message || '').length > 100 ? '…' : ''}</span>
             </div>
           `).join('')
         }
@@ -288,7 +288,7 @@ class HALogEmail extends HTMLElement {
         <div class="schedule-grid">
           <div class="schedule-card">
             <div class="schedule-title">\uD83D\uDDD3\uFE0F Daily Report</div>
-            <div class="schedule-desc">Every day at 07:00 â€” errors + warnings summary</div>
+            <div class="schedule-desc">Every day at 07:00 — errors + warnings summary</div>
             <div class="schedule-row">
               <span class="schedule-status ${dailyAuto === 'on' ? 'status-on' : 'status-off'}">
                 ${dailyAuto === 'on' ? '\uD83D\uDFE2 Active' : '\u26AB Disabled'}
@@ -301,7 +301,7 @@ class HALogEmail extends HTMLElement {
 
           <div class="schedule-card">
             <div class="schedule-title">\uD83D\uDCC6 Weekly Report</div>
-            <div class="schedule-desc">Every Monday at 07:30 â€” full week log digest</div>
+            <div class="schedule-desc">Every Monday at 07:30 — full week log digest</div>
             <div class="schedule-row">
               <span class="schedule-status ${weeklyAuto === 'on' ? 'status-on' : 'status-off'}">
                 ${weeklyAuto === 'on' ? '\uD83D\uDFE2 Active' : '\u26AB Disabled'}

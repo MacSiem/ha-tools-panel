@@ -289,30 +289,42 @@ class HAEnergyInsights extends HTMLElement {
       .slice(0, 5);
   }
 
-  _processHistory(history, days) {
-    if (!Array.isArray(history)) return new Array(days).fill(0);
-    const result = new Array(days).fill(0);
+  _processHistory(history, periods) {
+    if (!Array.isArray(history)) return new Array(periods).fill(0);
+    const result = new Array(periods).fill(0);
     const now = new Date();
     history.forEach(entityHistory => {
       if (!Array.isArray(entityHistory) || entityHistory.length === 0) return;
       const uom = entityHistory[0]?.attributes?.unit_of_measurement;
       if (!uom || (uom !== 'kWh' && uom !== 'Wh' && uom !== 'W')) return;
+      // Group entries by period bucket
+      const buckets = {};
       entityHistory.forEach(entry => {
         const val = parseFloat(entry.state);
-        if (isNaN(val)) return;
+        if (isNaN(val) || val < 0) return;
+        let kwh = 0;
+        if (uom === 'kWh') kwh = val;
+        else if (uom === 'Wh') kwh = val / 1000;
+        else if (uom === 'W') kwh = val / 1000;
         const date = new Date(entry.last_changed);
         const daysAgo = Math.floor((now - date) / 86400000);
-        if (daysAgo >= 0 && daysAgo < days) {
-          const idx = days - 1 - daysAgo;
-          let kwh = 0;
-          if (uom === 'kWh') kwh = val;
-          else if (uom === 'Wh') kwh = val / 1000;
-          else if (uom === 'W') kwh = val / 1000;
-          result[idx] = Math.max(result[idx], kwh);
+        if (daysAgo >= 0 && daysAgo < periods) {
+          const idx = periods - 1 - daysAgo;
+          if (!buckets[idx]) buckets[idx] = [];
+          buckets[idx].push(kwh);
+        }
+      });
+      // Calculate consumption as delta (last - first) for each period
+      Object.entries(buckets).forEach(([idx, vals]) => {
+        if (vals.length >= 2) {
+          const delta = vals[vals.length - 1] - vals[0];
+          result[parseInt(idx)] += Math.max(0, delta);
+        } else if (vals.length === 1) {
+          // Single reading - cannot compute delta, skip
         }
       });
     });
-    return result;
+    return result.map(v => Math.round(v * 100) / 100);
   }
 
   _buildDailyFromHistory(history) {
@@ -327,16 +339,22 @@ class HAEnergyInsights extends HTMLElement {
       if (!Array.isArray(entityHistory) || entityHistory.length === 0) return;
       const uom = entityHistory[0]?.attributes?.unit_of_measurement;
       if (!uom || (uom !== 'kWh' && uom !== 'Wh')) return;
+      // Get first and last readings from previous week to compute delta
+      let firstVal = null, lastVal = null;
       entityHistory.forEach(entry => {
         const val = parseFloat(entry.state);
-        if (isNaN(val)) return;
+        if (isNaN(val) || val < 0) return;
+        const kwh = uom === 'kWh' ? val : val / 1000;
         const date = new Date(entry.last_changed);
         const daysAgo = Math.floor((now - date) / 86400000);
         if (daysAgo >= 7 && daysAgo < 14) {
-          const kwh = uom === 'kWh' ? val : val / 1000;
-          total = Math.max(total, kwh);
+          if (firstVal === null) firstVal = kwh;
+          lastVal = kwh;
         }
       });
+      if (firstVal !== null && lastVal !== null) {
+        total += Math.max(0, lastVal - firstVal);
+      }
     });
     return Math.round(total * 100) / 100;
   }

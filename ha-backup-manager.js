@@ -1,4 +1,4 @@
-class HaBackupManager extends HTMLElement {
+﻿class HaBackupManager extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -88,13 +88,22 @@ class HaBackupManager extends HTMLElement {
     this._error = null;
 
     try {
-      const result = await this._hass.callWS({ type: 'backup/info' });
-      if (result && result.backups) {
-        this._backups = result.backups.sort((a, b) =>
+      // Use supervisor/api /backups which includes size and size_bytes
+      let backupList = [];
+      try {
+        const svResult = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/backups', method: 'get' });
+        backupList = svResult?.backups || svResult?.data?.backups || [];
+      } catch(svErr) {
+        // Fallback to backup/info (no size data)
+        const biResult = await this._hass.callWS({ type: 'backup/info' });
+        backupList = biResult?.backups || [];
+      }
+      if (backupList.length > 0) {
+        this._backups = backupList.sort((a, b) =>
           new Date(b.date || 0) - new Date(a.date || 0)
         );
         this._isDemoData = false;
-    this._charts = {};
+        this._charts = {};
         this._error = null;
         this._calculateHealthData();
       }
@@ -196,6 +205,11 @@ class HaBackupManager extends HTMLElement {
     return { days, hours };
   }
 
+  _formatMB(mb) {
+    if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
+    return `${mb.toFixed(1)} MB`;
+  }
+
   _formatBytes(bytes) {
     const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
@@ -259,27 +273,27 @@ class HaBackupManager extends HTMLElement {
                 <div class="backup-header">
                   <div class="backup-info">
                     <h3>${backup.name || 'Backup'}</h3>
-                    ${backup.type ? `<span class="backup-type ${backup.type}">${backup.type}</span>` : `<span class="backup-type full">full</span>`}
-                    ${(backup.is_protected || backup.protected) ? '<span class="badge protected">🔒 Protected</span>' : ''}
+                    <span class="backup-type ${backup.type}">${backup.type}</span>
+                    ${backup.is_protected ? '<span class="badge protected">🔒 Protected</span>' : ''}
                   </div>
                   <div class="backup-meta">
                     <span class="date">${this._formatDate(backup.date)}</span>
-                    <span class="size">${this._formatBytes((backup.size_in_bytes || backup.compressed_size || (backup.size ? (backup.size < 50000 ? Math.round(backup.size * 1024 * 1024) : backup.size) : 0)))}</span>
+                    <span class="size">${backup.size_bytes ? this._formatBytes(backup.size_bytes) : (backup.size ? this._formatMB(backup.size) : '?')}</span>
                   </div>
                 </div>
                 ${this._selectedBackup?.slug === backup.slug ? `
                   <div class="backup-details">
                     <h4>Backup Contents:</h4>
                     <div class="contents-grid">
-                      ${backup.includes?.homeassistant ? '<span class="content-item">📋 Home Assistant Config</span>' : ''}
-                      ${backup.includes?.database ? '<span class="content-item">💾 Database</span>' : ''}
-                      ${((backup.includes?.addons?.length || backup.addons?.length || 0) > 0) ? `<span class="content-item">🧩 ${backup.includes?.addons?.length || backup.addons?.length || 0} Add-ons</span>` : ""}
-                      ${((backup.includes?.folders?.length || backup.folders?.length || 0) > 0) ? `<span class="content-item">📁 ${backup.includes?.folders?.length || backup.folders?.length || 0} Folders</span>` : ""}
+                      ${(backup.includes?.homeassistant || backup.homeassistant_included || backup.content?.homeassistant) ? '<span class="content-item">\u{1F4CB} Home Assistant Config</span>' : ''}
+                      ${(backup.includes?.database || backup.database_included) ? '<span class="content-item">\u{1F4BE} Database</span>' : ''}
+                      ${(backup.includes?.addons?.length > 0 || backup.addons?.length > 0) ? `<span class="content-item">\u{1F9E9} ${(backup.includes?.addons || backup.addons || []).length} Add-ons</span>` : ''}
+                      ${(backup.includes?.folders?.length > 0 || backup.folders?.length > 0) ? `<span class="content-item">\u{1F4C1} ${(backup.includes?.folders || backup.folders || []).length} Folders</span>` : ''}
                     </div>
-                    ${((backup.includes?.addons || backup.addons || []).length > 0) ? `
+                    ${backup.includes?.addons?.length > 0 ? `
                       <div class="addon-list">
                         <strong>Add-ons:</strong>
-                        ${(backup.includes?.addons || backup.addons || []).map(a => `<span>${typeof a === "string" ? a : (a.slug || a.name || a.id || JSON.stringify(a))}</span>`).join("")}
+                        ${backup.includes.addons.map(a => `<span>${a}</span>`).join('')}
                       </div>
                     ` : ''}
                   </div>
@@ -402,25 +416,6 @@ class HaBackupManager extends HTMLElement {
   --bento-shadow-lg: 0 8px 25px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.04);
   --bento-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :host {
-    --bento-bg: #1a1a2e;
-    --bento-card: #16213e;
-    --bento-text: #e2e8f0;
-    --bento-text-secondary: #94a3b8;
-    --bento-border: #334155;
-    --bento-success: #34d399;
-    --bento-warning: #fbbf24;
-    --bento-error: #f87171;
-  }
-}
-:host-context([data-themes]) {
-  --bento-bg: var(--lovelace-background, var(--primary-background-color, #F8FAFC));
-  --bento-card: var(--card-background-color, var(--ha-card-background, #FFFFFF));
-  --bento-text: var(--primary-text-color, #1E293B);
-  --bento-text-secondary: var(--secondary-text-color, #64748B);
-  --bento-border: var(--divider-color, #E2E8F0);
 }
 
 /* Card */
@@ -985,7 +980,7 @@ canvas {
   --bento-shadow-md: 0 4px 12px rgba(0,0,0,0.06);
   --bento-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: block;
-  color-scheme: light dark;
+  color-scheme: light !important;
 }
 * { box-sizing: border-box; }
 

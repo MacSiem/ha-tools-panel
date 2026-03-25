@@ -102,7 +102,7 @@ class HaEnergyOptimizer extends HTMLElement {
 
       if (kwhIds.length === 0) {
         this._statsLoading = false;
-        return; // No energy sensors, keep demo data
+        this._hasRealData = false; this._recommendations = []; return; // No energy sensors
       }
 
       this._energySensorIds = kwhIds;
@@ -212,6 +212,7 @@ class HaEnergyOptimizer extends HTMLElement {
   }
 
   _generateRecommendations() {
+    if (!this._hasRealData) { this._recommendations = []; return; }
     const peakHourStart = this._config.peak_hours?.start || 6;
     const peakHourEnd = this._config.peak_hours?.end || 22;
     const avgPeakUsage = this._energyData.slice(peakHourStart, peakHourEnd).reduce((a, b) => a + b, 0) / (peakHourEnd - peakHourStart);
@@ -220,7 +221,7 @@ class HaEnergyOptimizer extends HTMLElement {
     this._recommendations = [
       {
         id: 1,
-        icon: 'đź§ş',
+        icon: '🧺',
         title: `Shift laundry to off-peak hours`,
         description: `Your peak usage is ${peakHourStart}-${peakHourEnd}. Running laundry at night saves up to 30% on that load.`,
         savings: 12.5,
@@ -229,7 +230,7 @@ class HaEnergyOptimizer extends HTMLElement {
       },
       {
         id: 2,
-        icon: 'đźŤ˝ď¸Ź',
+        icon: '🍽️',
         title: 'Use dishwasher in off-peak time',
         description: 'Schedule dishwasher runs for morning or late evening when rates are lower.',
         savings: 8.3,
@@ -238,16 +239,16 @@ class HaEnergyOptimizer extends HTMLElement {
       },
       {
         id: 3,
-        icon: 'đźŚˇď¸Ź',
+        icon: '🌡️',
         title: 'Optimize thermostat settings',
-        description: `Reduce heating by 1Â°C during peak hours (${peakHourStart}-${peakHourEnd}) for consistent savings.`,
+        description: `Reduce heating by 1°C during peak hours (${peakHourStart}-${peakHourEnd}) for consistent savings.`,
         savings: 15.0,
         difficulty: 'medium',
         impact: 'high'
       },
       {
         id: 4,
-        icon: 'đź’ˇ',
+        icon: '💡',
         title: 'Replace with LED lighting',
         description: 'Your evening usage spikes significantly. LED bulbs reduce lighting energy by 75%.',
         savings: 6.2,
@@ -256,7 +257,7 @@ class HaEnergyOptimizer extends HTMLElement {
       },
       {
         id: 5,
-        icon: 'đź“±',
+        icon: '🔌',
         title: 'Reduce standby power consumption',
         description: 'Use smart power strips to eliminate phantom loads from devices in standby mode.',
         savings: 4.5,
@@ -1031,7 +1032,7 @@ canvas {
               <div class="comparison-title">Last Week</div>
               <div class="comparison-value">${this._comparisonData.lastWeek.toFixed(2)}</div>
               <div class="change-indicator ${this._comparisonData.thisWeek > this._comparisonData.lastWeek ? 'change-up' : 'change-down'}">
-                ${this._comparisonData.thisWeek > this._comparisonData.lastWeek ? 'đź“' : 'đź“‰'}
+                ${this._comparisonData.thisWeek > this._comparisonData.lastWeek ? '📈' : '📉'}
                 ${Math.abs(((this._comparisonData.thisWeek - this._comparisonData.lastWeek) / this._comparisonData.lastWeek * 100)).toFixed(1)}%
               </div>
             </div>
@@ -1047,7 +1048,7 @@ canvas {
               <div class="comparison-title">Last Month</div>
               <div class="comparison-value">${this._comparisonData.lastMonth.toFixed(0)}</div>
               <div class="change-indicator ${this._comparisonData.thisMonth > this._comparisonData.lastMonth ? 'change-up' : 'change-down'}">
-                ${this._comparisonData.thisMonth > this._comparisonData.lastMonth ? 'đź“' : 'đź“‰'}
+                ${this._comparisonData.thisMonth > this._comparisonData.lastMonth ? '📈' : '📉'}
                 ${Math.abs(((this._comparisonData.thisMonth - this._comparisonData.lastMonth) / this._comparisonData.lastMonth * 100)).toFixed(1)}%
               </div>
             </div>

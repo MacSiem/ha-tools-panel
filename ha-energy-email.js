@@ -1,4 +1,4 @@
-﻿/**
+/**
  * HA Energy Email Card v2.0.0
  * Send daily/weekly/monthly energy usage reports as HTML email.
  * Integrates with energy_reports.yaml (SMTP notify + templates).

@@ -119,10 +119,26 @@ class HAYamlChecker extends HTMLElement {
 
     try {
       const result = await this._hass.callApi('POST', 'config/core/check_config');
+      // HA API returns errors/warnings as string or null, not array
+      const rawErrors = result.errors;
+      const rawWarnings = result.warnings;
+      const parseMessages = (raw) => {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw.map(e => typeof e === 'string' ? { message: e } : e);
+        if (typeof raw === 'string') {
+          // Split multi-line error string into individual messages
+          return raw.split('\n').filter(l => l.trim()).map(line => {
+            // Try to extract component and details
+            const match = line.match(/^(?:Invalid config for \[(\w+)\]:?\s*)?(.+)/i);
+            return { message: line, component: match ? match[1] : null, detail: match ? match[2] : line };
+          });
+        }
+        return [{ message: JSON.stringify(raw) }];
+      };
       this._checkResult = {
         ok: result.result === 'valid',
-        errors: result.errors || [],
-        warnings: result.warnings || [],
+        errors: parseMessages(rawErrors),
+        warnings: parseMessages(rawWarnings),
         raw: result,
         ts: new Date().toLocaleTimeString('pl-PL'),
       };
@@ -519,7 +535,7 @@ class HAYamlChecker extends HTMLElement {
         </div>
       </div>
       ${r.errors.length ? `<div class="issue-section"><h3>Błędy (${r.errors.length})</h3>
-        ${r.errors.map(e => `<div class="issue-item error"><span class="issue-icon">❌</span><div>${e.message || JSON.stringify(e)}</div></div>`).join('')}
+        ${r.errors.map(e => `<div class="issue-item error"><span class="issue-icon">\u274C</span><div>${e.component ? '<strong>[' + e.component + ']</strong> ' : ''}${e.detail || e.message || JSON.stringify(e)}</div></div>`).join('')}
       </div>` : ''}
       ${r.warnings.length ? `<div class="issue-section"><h3>Ostrzeżenia (${r.warnings.length})</h3>
         ${r.warnings.map(w => `<div class="issue-item warning"><span class="issue-icon">⚠️</span><div>${w.message || JSON.stringify(w)}</div></div>`).join('')}
@@ -635,7 +651,7 @@ class HAYamlChecker extends HTMLElement {
               <div class="file-path">${f.path}${f.critical ? '<span class="badge critical">krytyczny</span>' : ''}</div>
               <div class="file-desc">${f.desc}</div>
             </div>
-            <span class="file-status-icon" title="Nieznany (HA API nie zwraca listy plik\u00F3w YAML)">âť"</span>
+            <span class="file-status-icon" title="Nieznany (HA API nie zwraca listy plik\u00F3w YAML)">\u2753</span>
           </div>
         `).join('')}
       </div>

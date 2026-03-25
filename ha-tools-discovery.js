@@ -1,4 +1,4 @@
-﻿/**
+/**
  * HA Tools Discovery v1.0.0
  * Shared discovery & recommendation library for MacSiem HA Tools ecosystem.
  * 
