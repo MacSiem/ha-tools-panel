@@ -1067,8 +1067,7 @@ class HATraceViewer extends HTMLElement {
         <div class="topbar">
           <span class="title">${this.config.title || this._t('traceViewer')}</span>
           <div class="topbar-r">
-            <span style="font-size:11px;color:var(--ts);padding:4px 8px;background:var(--bg);border-radius:var(--radius-xs);border:1px solid var(--dc)">\u{1F4BE} ${this._getStoredTraceCount()} saved</span>
-            <button class="btn-s" id="refreshBtn">\u21BB</button>
+            <span class="trace-saved-badge" id="traceStorageInfo" title="${this._lang === 'pl' ? 'Kliknij aby zmieni\u0107 ustawienia przechowywania trace\u00f3w' : 'Click to change trace storage settings'}" style="font-size:11px;color:var(--ts);padding:4px 8px;background:var(--bg);border-radius:var(--radius-xs);border:1px solid var(--dc);cursor:pointer;display:inline-flex;align-items:center;gap:4px">\u{1F4BE} ${this._getStoredTraceCount()} saved <span style="font-size:9px;opacity:0.6">\u2699\uFE0F</span></span>
             <div class="dd" id="expDD">
               <button class="btn-s" id="expBtn">${this._t('export')} \u25BE</button>
               <div class="dd-menu">
@@ -1155,7 +1154,12 @@ class HATraceViewer extends HTMLElement {
     const $ = s => this.shadowRoot.querySelector(s);
     const $$ = s => this.shadowRoot.querySelectorAll(s);
 
-    $('#refreshBtn')?.addEventListener('click', () => this.updateAutomationData());
+    // Trace storage info badge — navigate to panel Settings > Trace Viewer
+    $('#traceStorageInfo')?.addEventListener('click', () => {
+      const panel = this.closest('ha-tools-panel') || document.querySelector('ha-tools-panel');
+      if (panel && panel._navigateToSettings) { panel._navigateToSettings('trace-viewer'); }
+      else { this.dispatchEvent(new CustomEvent('navigate-settings', { bubbles: true, composed: true, detail: { section: 'trace-viewer' } })); }
+    });
 
     // Export dropdown
     $('#expBtn')?.addEventListener('click', e => {
@@ -1634,12 +1638,13 @@ class HATraceViewer extends HTMLElement {
 /* Responsive */
 @media (max-width: 1200px) { .pan-right { display: none; } }
 @media (max-width: 900px) { .pan-left { display: none !important; } .pan-center.expanded { min-width: 100%; } }
-@media (max-width: 768px) { 
-  .stats { grid-template-columns: repeat(2, 1fr); } 
-  .panels { flex-direction: column; } 
-  .pan-left { display: block !important; width: 100% !important; max-height: 200px; overflow-y: auto; border-right: none; border-bottom: 1px solid var(--dc); min-width: auto; }
+@media (max-width: 768px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .panels { flex-direction: column; }
+  .pan-left { display: block !important; width: 100% !important; max-height: 40vh; overflow-y: auto; border-right: none; border-bottom: 1px solid var(--dc); min-width: auto; }
   .pan-center { width: 100% !important; min-width: 0 !important; flex: 1; }
-  .pan-right { display: none !important; }
+  .pan-right { display: block !important; width: 100% !important; min-width: auto; max-height: 50vh; overflow-y: auto; border-right: none; border-top: 1px solid var(--dc); }
+  .pan-right:empty, .pan-right .empty { display: none; }
 }
 </style>`;
   }
