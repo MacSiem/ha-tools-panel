@@ -1156,9 +1156,21 @@ class HATraceViewer extends HTMLElement {
 
     // Trace storage info badge — navigate to panel Settings > Trace Viewer
     $('#traceStorageInfo')?.addEventListener('click', () => {
-      const panel = this.closest('ha-tools-panel') || document.querySelector('ha-tools-panel');
-      if (panel && panel._navigateToSettings) { panel._navigateToSettings('trace-viewer'); }
-      else { this.dispatchEvent(new CustomEvent('navigate-settings', { bubbles: true, composed: true, detail: { section: 'trace-viewer' } })); }
+      // Shadow DOM: this element lives inside ha-tools-panel's shadowRoot
+      // closest() can't cross shadow boundaries, use getRootNode().host instead
+      let panel = null;
+      try {
+        const root = this.getRootNode();
+        if (root && root.host && root.host.tagName === 'HA-TOOLS-PANEL') {
+          panel = root.host;
+        }
+      } catch (e) {}
+      if (!panel) panel = document.querySelector('ha-tools-panel');
+      if (panel && panel._navigateToSettings) {
+        panel._navigateToSettings('trace-backend');
+      } else {
+        this.dispatchEvent(new CustomEvent('navigate-settings', { bubbles: true, composed: true, detail: { section: 'trace-backend' } }));
+      }
     });
 
     // Export dropdown

@@ -1905,7 +1905,7 @@ ${HAToolsPanel.CSS}</style>
 
   async _applyStoredTraces(count, statusEl) {
     if (!this._hass) {
-      statusEl.textContent = '\u274C Brak połączenia z Home Assistant';
+      statusEl.textContent = '\u274C Brak po\u0142\u0105czenia z Home Assistant';
       statusEl.className = 'status-msg visible error';
       return;
     }
@@ -1913,7 +1913,7 @@ ${HAToolsPanel.CSS}</style>
     statusEl.className = 'status-msg visible info';
 
     try {
-      // Get all automations
+      // Get all automations with their unique IDs
       const automations = Object.values(this._hass.states)
         .filter(s => s.entity_id.startsWith('automation.'))
         .map(s => s.attributes.id)
@@ -1921,27 +1921,73 @@ ${HAToolsPanel.CSS}</style>
 
       let updated = 0;
       let skippedYaml = 0;
+      let alreadySet = 0;
       let errors = 0;
 
-      // Count YAML vs UI automations
       for (const id of automations) {
-        statusEl.textContent = `\u23F3 Sprawdzanie ${updated + skippedYaml + 1}/${automations.length}...`;
+        const progress = updated + skippedYaml + alreadySet + errors + 1;
+        statusEl.textContent = `\u23F3 Aktualizacja ${progress}/${automations.length}...`;
         try {
-          await this._hass.callApi('GET', `config/automation/config/${id}`);
+          // GET current config
+          const config = await this._hass.callApi('GET', `config/automation/config/${id}`);
+
+          // Check if already set to desired value
+          if (config.stored_traces === count) {
+            alreadySet++;
+            continue;
+          }
+
+          // Update stored_traces and POST back
+          config.stored_traces = count;
+          await this._hass.callApi('PUT', `config/automation/config/${id}`, config);
           updated++;
         } catch (e) {
-          skippedYaml++;
+          // YAML automations can't be fetched/updated via API
+          if (e.status_code === 404 || (e.message && e.message.includes('not found'))) {
+            skippedYaml++;
+          } else {
+            errors++;
+            console.warn(`[HA Tools] Failed to update stored_traces for ${id}:`, e);
+          }
         }
       }
 
-      statusEl.innerHTML = `\u2705 stored_traces: ${count}<br>` +
-        `<small>\u{1F4CA} ${automations.length} automatyzacji: ${updated} UI, ${skippedYaml} YAML</small><br>` +
-        `<small style="opacity:0.8">\u{1F4DD} Ustaw <code>stored_traces: ${count}</code> w configuration.yaml pod sekcją <code>automation:</code> — API nie obsługuje tego pola per-automatyzacja.</small>`;
+      let msg = `\u2705 stored_traces = ${count} zastosowane!<br>`;
+      msg += `<small>\u{1F4CA} ${automations.length} automatyzacji: ${updated} zaktualizowanych`;
+      if (alreadySet > 0) msg += `, ${alreadySet} ju\u017C ustawionych`;
+      if (skippedYaml > 0) msg += `, ${skippedYaml} YAML (pomini\u0119te)`;
+      if (errors > 0) msg += `, ${errors} b\u0142\u0119d\u00F3w`;
+      msg += `</small>`;
+      if (skippedYaml > 0) {
+        msg += `<br><small style="opacity:0.8">\u{1F4DD} ${skippedYaml} automatyzacji YAML wymaga r\u0119cznej edycji: ustaw <code>stored_traces: ${count}</code> w configuration.yaml</small>`;
+      }
+      statusEl.innerHTML = msg;
       statusEl.className = 'status-msg visible success';
     } catch (e) {
-      statusEl.textContent = `\u274C Błąd: ${e.message}`;
+      statusEl.textContent = `\u274C B\u0142\u0105d: ${e.message}`;
       statusEl.className = 'status-msg visible error';
     }
+  }
+
+  _navigateToSettings(section) {
+    this._showSettings();
+    // Set active nav to settings
+    const settingsNav = this.shadowRoot.querySelector('.nav-item[data-view="settings"]');
+    if (settingsNav) this._setActiveNav(settingsNav);
+    // Expand and scroll to section after render
+    setTimeout(() => {
+      const content = this.shadowRoot.getElementById('content');
+      if (!content || !section) return;
+      const header = content.querySelector(`.settings-group-header[data-group="${section}"]`);
+      const body = content.querySelector(`.settings-group-body[data-body="${section}"]`);
+      if (header && body) {
+        body.classList.remove('hidden');
+        header.classList.remove('collapsed');
+        header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        header.style.background = 'rgba(59, 130, 246, 0.15)';
+        setTimeout(() => { header.style.background = ''; }, 2000);
+      }
+    }, 200);
   }
 
   _loadTool(toolId, tag) {
