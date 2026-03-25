@@ -115,6 +115,82 @@ class HALogEmail extends HTMLElement {
     };
   }
 
+  // ── SMTP Detection & Verification ────────────────────────────────
+  _detectSmtp() {
+    if (!this._hass) return { found: false, services: [] };
+    const notifyServices = this._hass.services?.notify || {};
+    const emailServices = Object.keys(notifyServices).filter(s =>
+      s.includes('email') || s.includes('smtp') || s.includes('mail') || s.includes('gmail') || s.includes('outlook')
+    );
+    return {
+      found: emailServices.length > 0,
+      services: emailServices,
+      defaultService: emailServices.find(s => s === 'email_report') || emailServices[0] || null
+    };
+  }
+
+  async _testSmtp(service) {
+    if (!this._hass || !service) return;
+    this._smtpTesting = true;
+    this._update();
+    try {
+      await this._hass.callService('notify', service, {
+        title: '\u2705 HA Tools Panel \u2014 SMTP Test (Log Email)',
+        message: 'SMTP jest poprawnie skonfigurowany.\nTestowy email z Log Email.\nCzas: ' + new Date().toLocaleString('pl-PL')
+      });
+      this._smtpStatus = { ok: true, service, time: new Date().toLocaleTimeString('pl-PL') };
+    } catch (e) {
+      this._smtpStatus = { ok: false, service, error: e.message || 'Unknown error' };
+    }
+    this._smtpTesting = false;
+    this._update();
+  }
+
+  _renderSmtpSection() {
+    const smtp = this._detectSmtp();
+    if (smtp.found) {
+      const statusBadge = this._smtpStatus
+        ? (this._smtpStatus.ok
+          ? '<span class="badge-ok">\u2705 Test OK (' + this._smtpStatus.time + ')</span>'
+          : '<span class="badge-er">\u274C ' + this._smtpStatus.error + '</span>')
+        : '';
+      return '<div class="smtp-section">' +
+        '<div class="smtp-header">' +
+          '<span class="smtp-icon">\u2709\uFE0F</span>' +
+          '<div>' +
+            '<div class="smtp-title">SMTP skonfigurowany</div>' +
+            '<div class="smtp-sub">Serwis: <code>notify.' + smtp.defaultService + '</code>' +
+            (smtp.services.length > 1 ? ' (+ ' + (smtp.services.length - 1) + ' wi\u0119cej)' : '') + '</div>' +
+          '</div>' +
+          '<span class="badge-ok" style="margin-left:auto">\u2705</span>' +
+        '</div>' +
+        '<div class="smtp-actions">' +
+          '<button class="send-btn" id="btn-smtp-test" style="width:auto;padding:8px 16px" ' + (this._smtpTesting ? 'disabled' : '') + '>' +
+            (this._smtpTesting ? '\u23F3 Wysy\u0142am...' : '\u{1F4E8} Wy\u015Blij test') +
+          '</button>' +
+          statusBadge +
+        '</div>' +
+      '</div>';
+    }
+    return '<div class="smtp-section smtp-missing">' +
+      '<div class="smtp-header">' +
+        '<span class="smtp-icon">\u26A0\uFE0F</span>' +
+        '<div>' +
+          '<div class="smtp-title">SMTP nie skonfigurowany</div>' +
+          '<div class="smtp-sub">Wysy\u0142anie email\u00F3w nie b\u0119dzie dzia\u0142a\u0107 bez integracji SMTP</div>' +
+        '</div>' +
+        '<span class="badge-er" style="margin-left:auto">\u274C</span>' +
+      '</div>' +
+      '<div class="smtp-guide">' +
+        '<p><strong>\u{1F4D6} Jak skonfigurowa\u0107?</strong></p>' +
+        '<p>Dodaj do <code>configuration.yaml</code>:</p>' +
+        '<pre style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;line-height:1.6;white-space:pre;margin:8px 0">notify:\n  - name: email_report\n    platform: smtp\n    server: smtp.gmail.com\n    port: 587\n    encryption: starttls\n    username: twoj@gmail.com\n    password: !secret gmail_app_password\n    sender: twoj@gmail.com\n    recipient: odbiorca@email.com</pre>' +
+        '<p>Dla Gmail: wygeneruj <b>App Password</b> na <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#3b82f6">myaccount.google.com/apppasswords</a></p>' +
+        '<p>Inne serwery: Outlook (<code>smtp.office365.com:587</code>), WP (<code>smtp.wp.pl:465</code>), Onet (<code>smtp.poczta.onet.pl:465</code>)</p>' +
+        '<p>Po konfiguracji zrestartuj HA.</p>' +
+      '</div>' +
+    '</div>';
+  }
   async _sendEmailNow(period) {
     if (!this._hass) return;
     this._sendStatus = { status: 'sending', period };
@@ -443,7 +519,20 @@ class HALogEmail extends HTMLElement {
         .setup-steps pre { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 12px; color: var(--primary); margin: 4px 0; overflow-x: auto; }
         code { background: var(--border); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
 
-        .send-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .smtp-section { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .smtp-missing { border-color: #f59e0b40; background: #fef3c710; }
+    .smtp-header { display: flex; align-items: center; gap: 10px; }
+    .smtp-icon { font-size: 22px; }
+    .smtp-title { font-weight: 700; font-size: 13px; color: var(--text); }
+    .smtp-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .smtp-sub code { background: var(--border); padding: 1px 5px; border-radius: 4px; font-size: 10px; }
+    .smtp-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .smtp-guide { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--text2); }
+    .smtp-guide p { margin: 6px 0; }
+    .smtp-guide code { background: var(--border); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+    .badge-ok { color: #10b981; font-size: 12px; font-weight: 600; }
+    .badge-er { color: #ef4444; font-size: 12px; font-weight: 600; }
+    .send-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .send-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
         .send-icon { font-size: 28px; margin-bottom: 6px; }
         .send-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
@@ -503,6 +592,11 @@ class HALogEmail extends HTMLElement {
     const btnWeeklyToggle = this.shadowRoot.getElementById('btn-weekly-toggle');
     if (btnWeeklyToggle) btnWeeklyToggle.addEventListener('click', () => this._toggleAutomation('automation.ha_log_email_weekly'));
 
+    const btnSmtpTest = this.shadowRoot.getElementById('btn-smtp-test');
+    if (btnSmtpTest) {
+      const smtp = this._detectSmtp();
+      btnSmtpTest.addEventListener('click', () => this._testSmtp(smtp.defaultService));
+    }
     const btnSendDaily = this.shadowRoot.getElementById('btn-send-daily');
     if (btnSendDaily) btnSendDaily.addEventListener('click', () => this._sendEmailNow('daily'));
 

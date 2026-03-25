@@ -172,7 +172,29 @@ class HAEnergyEmail extends HTMLElement {
         .btn-primary { background: var(--pr) !important; color: #fff !important; border-color: var(--pr) !important; box-shadow: 0 2px 8px rgba(59,130,246,.3); }
         .btn-primary:hover { background: #2563EB !important; }
         .btn-ok { background: var(--ok) !important; color: #fff !important; border-color: var(--ok) !important; }
-        .toast { display: none; position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #1e293b; color: #e2e8f0; padding: 12px 20px; border-radius: var(--r2); font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.3); max-width: 320px; }
+        .smtp-section { background: var(--bg, #f8fafc); border: 1px solid var(--bd, #e2e8f0); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.smtp-missing { border-color: #f59e0b40; background: #fef3c720; }
+.smtp-header { display: flex; align-items: center; gap: 12px; }
+.smtp-icon { font-size: 24px; }
+.smtp-title { font-weight: 700; font-size: 14px; color: var(--t1, #1e293b); }
+.smtp-detail { font-size: 12px; color: var(--t2, #64748b); margin-top: 2px; }
+.smtp-detail code { background: var(--bd, #e2e8f0); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+.smtp-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.smtp-guide { margin-top: 16px; }
+.guide-title { font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--t1, #1e293b); }
+.guide-steps { display: flex; flex-direction: column; gap: 16px; }
+.guide-step { display: flex; gap: 12px; }
+.step-num { flex-shrink: 0; width: 28px; height: 28px; background: var(--primary, #3b82f6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.guide-step p { margin: 4px 0; font-size: 13px; color: var(--t2, #64748b); line-height: 1.5; }
+.guide-step pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.6; white-space: pre; margin: 8px 0; }
+.guide-step a { color: var(--primary, #3b82f6); text-decoration: none; }
+.guide-step a:hover { text-decoration: underline; }
+.guide-alt { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--bd, #e2e8f0); }
+.smtp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.smtp-table th { background: var(--bd, #e2e8f0); padding: 6px 10px; text-align: left; font-weight: 600; }
+.smtp-table td { padding: 6px 10px; border-bottom: 1px solid var(--bd, #e2e8f020); }
+.smtp-table tr:hover td { background: var(--bd, #e2e8f020); }
+.toast { display: none; position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #1e293b; color: #e2e8f0; padding: 12px 20px; border-radius: var(--r2); font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.3); max-width: 320px; }
         .toast.show { display: block; animation: slideUp .3s ease-out; }
         @keyframes slideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
         .preview-box { background: var(--bg); border: 1px solid var(--bo); border-radius: var(--r2); padding: 16px; font-size: 13px; color: var(--tx); max-height: 320px; overflow-y: auto; }
@@ -327,9 +349,7 @@ class HAEnergyEmail extends HTMLElement {
     };
 
     return `
-      <div class="info-row">
-        \u2139\uFE0F&nbsp; Reports are sent via <b>notify.email_report</b> (SMTP Gmail). Automations in <code>automations.yaml</code> + sensors in <code>packages/energy_reports.yaml</code>.
-      </div>
+      ${this._renderSmtpSection()}
 
       <div class="schedule-card">
         <div class="schedule-row">
@@ -543,6 +563,11 @@ class HAEnergyEmail extends HTMLElement {
     const disableWeekly = root.getElementById('disable-weekly');
     const enableMonthly = root.getElementById('enable-monthly');
     const disableMonthly = root.getElementById('disable-monthly');
+    const btnSmtpTest = root.getElementById('btn-smtp-test');
+    if (btnSmtpTest) {
+      const smtp = this._detectSmtp();
+      btnSmtpTest.addEventListener('click', () => this._testSmtp(smtp.defaultService));
+    }
     if (enableDaily) enableDaily.addEventListener('click', () => this._toggleAuto('automation.send_daily_energy_report', true));
     if (disableDaily) disableDaily.addEventListener('click', () => this._toggleAuto('automation.send_daily_energy_report', false));
     if (enableWeekly) enableWeekly.addEventListener('click', () => this._toggleAuto('automation.send_weekly_energy_report', true));
