@@ -1,13 +1,13 @@
 /**
- * HA Tools Panel v2.2 \u2014 Auto-loading addons with progress notification
+ * HA Tools Panel v2.2 — Auto-loading addons with progress notification
  * Author: MacSiem
  * Features: Auto-loads addon scripts, polls for customElements registration,
  *           shows loading progress bar, dynamically updates sidebar
  */
 
-// \u2500\u2500 Build version & auto-update detection \u2500\u2500
-// Zmie\u0144 BUILD_VERSION przy ka\u017cdej aktualizacji kodu.
-// Panel automatycznie wykryje now\u0105 wersj\u0119 i poka\u017ce toast z przyciskiem "Od\u015bwie\u017c".
+// ── Build version & auto-update detection ──
+// Zmień BUILD_VERSION przy każdej aktualizacji kodu.
+// Panel automatycznie wykryje nową wersję i pokaże toast z przyciskiem "Odśwież".
 const HA_TOOLS_BUILD = '3.3.0';
 const HA_TOOLS_BUILD_TS = '20260324-0955';
 
@@ -25,20 +25,19 @@ class HAToolsPanel extends HTMLElement {
     this._rendered = false;
     this._activeView = 'home';
     this._activeToolId = null;
+    this._collapsedGroups = new Set();
     this._cardInstance = null;
     this._settings = this._loadSettings();
     this._loadedCount = 0;
     this._loading = true;
     this._pollTimer = null;
     this._scriptLoadPromises = [];
-    this._lastSidebarAvailCount = -1;
-    this._lastSidebarUnavailCount = -1;
   }
 
   connectedCallback() {
     // When loaded via dynamic loader, HA may set properties (hass, panel, etc.)
     // as plain object props BEFORE the custom element class is defined.
-    // After upgrade, the setters never fired \u2014 re-apply them now.
+    // After upgrade, the setters never fired — re-apply them now.
     for (const prop of ['hass', 'panel', 'narrow', 'route']) {
       if (this.hasOwnProperty(prop)) {
         const val = this[prop];
@@ -48,28 +47,29 @@ class HAToolsPanel extends HTMLElement {
     }
   }
 
-  // Map tool tags to their script paths under /local/community/
+  // Map tool tags to their script paths (all in /local/community/ha-tools-panel/)
   static get TOOL_SCRIPTS() {
     return {
-      'ha-trace-viewer': '/local/community/ha-trace-viewer/ha-trace-viewer.js',
-      'ha-device-health': '/local/community/ha-device-health/ha-device-health.js',
-      'ha-automation-analyzer': '/local/community/ha-automation-analyzer/ha-automation-analyzer.js',
-      'ha-backup-manager': '/local/community/ha-backup-manager/ha-backup-manager.js',
-      'ha-network-map': '/local/community/ha-network-map/ha-network-map.js',
-      'ha-smart-reports': '/local/community/ha-smart-reports/ha-smart-reports.js',
-      'ha-energy-optimizer': '/local/community/ha-energy-optimizer/ha-energy-optimizer.js',
-      'ha-sentence-manager': '/local/community/ha-sentence-manager/ha-sentence-manager.js',
-      'ha-chore-tracker': '/local/community/ha-chore-tracker/ha-chore-tracker.js',
-      'ha-baby-tracker': '/local/community/ha-baby-tracker/ha-baby-tracker.js',
-      'ha-cry-analyzer': '/local/community/ha-cry-analyzer/ha-cry-analyzer.js',
-      'ha-data-exporter': '/local/community/ha-data-exporter/ha-data-exporter.js',
-      'ha-storage-monitor': '/local/community/ha-storage-monitor/ha-storage-monitor.js',
-      'ha-security-check': '/local/community/ha-security-check/ha-security-check.js',
-      'ha-energy-email': '/local/community/ha-energy-email/ha-energy-email.js',
-      'ha-vacuum-water-monitor': '/local/community/ha-vacuum-water-monitor/ha-vacuum-water-monitor.js',
-      'ha-log-email': '/local/community/ha-log-email/ha-log-email.js',
-      'ha-yaml-checker': '/local/community/ha-yaml-checker/ha-yaml-checker.js',
-      'ha-energy-insights': '/local/community/ha-energy-insights/ha-energy-insights.js',
+      'ha-trace-viewer': '/local/community/ha-tools-panel/ha-trace-viewer.js',
+      'ha-device-health': '/local/community/ha-tools-panel/ha-device-health.js',
+      'ha-automation-analyzer': '/local/community/ha-tools-panel/ha-automation-analyzer.js',
+      'ha-backup-manager': '/local/community/ha-tools-panel/ha-backup-manager.js',
+      'ha-network-map': '/local/community/ha-tools-panel/ha-network-map.js',
+      'ha-smart-reports': '/local/community/ha-tools-panel/ha-smart-reports.js',
+      'ha-energy-optimizer': '/local/community/ha-tools-panel/ha-energy-optimizer.js',
+      'ha-sentence-manager': '/local/community/ha-tools-panel/ha-sentence-manager.js',
+      'ha-chore-tracker': '/local/community/ha-tools-panel/ha-chore-tracker.js',
+      'ha-baby-tracker': '/local/community/ha-tools-panel/ha-baby-tracker.js',
+      'ha-cry-analyzer': '/local/community/ha-tools-panel/ha-cry-analyzer.js',
+      'ha-data-exporter': '/local/community/ha-tools-panel/ha-data-exporter.js',
+      'ha-storage-monitor': '/local/community/ha-tools-panel/ha-storage-monitor.js',
+      'ha-security-check': '/local/community/ha-tools-panel/ha-security-check.js',
+      'ha-energy-email': '/local/community/ha-tools-panel/ha-energy-email.js',
+      'ha-vacuum-water-monitor': '/local/community/ha-tools-panel/ha-vacuum-water-monitor.js',
+      'ha-log-email': '/local/community/ha-tools-panel/ha-log-email.js',
+      'ha-yaml-checker': '/local/community/ha-tools-panel/ha-yaml-checker.js',
+      'ha-energy-insights': '/local/community/ha-tools-panel/ha-energy-insights.js',
+      'ha-purge-cache': '/local/community/ha-tools-panel/ha-purge-cache.js',
     };
   }
 
@@ -79,7 +79,7 @@ class HAToolsPanel extends HTMLElement {
     const scripts = HAToolsPanel.TOOL_SCRIPTS;
     for (const [tag, src] of Object.entries(scripts)) {
       if (customElements.get(tag)) continue; // already registered by HACS or previous load
-      // Force-load with cache buster \u2014 do NOT check for existing script tags
+      // Force-load with cache buster — do NOT check for existing script tags
       // because HACS may have loaded an older cached version that failed to register
       const script = document.createElement('script');
       script.type = 'text/javascript';
@@ -162,95 +162,134 @@ class HAToolsPanel extends HTMLElement {
 
   _updateSidebar() {
     const { available, unavailable } = this._getToolStatus();
-    const availCount = available.length;
-    const unavailCount = unavailable.length;
-
-    // Always update badge and section header counts (cheap text-only updates)
+    // Update badge
     const badge = this.shadowRoot?.querySelector('.nav-badge');
-    if (badge) badge.textContent = `${availCount}/${HAToolsPanel.TOOLS.length}`;
+    if (badge) badge.textContent = `${available.length}/${HAToolsPanel.TOOLS.length}`;
+    // Update tools count in section header
     const toolsSection = this.shadowRoot?.querySelector('.nav-section-tools');
-    if (toolsSection) toolsSection.textContent = `Narz\u0119dzia (${availCount})`;
+    if (toolsSection) toolsSection.textContent = `Narzędzia (${available.length})`;
+    // Update unavailable section header
     const unavailSection = this.shadowRoot?.querySelector('.nav-section-unavailable');
     if (unavailSection) {
-      if (unavailCount > 0) {
-        unavailSection.textContent = `Niedost\u0119pne (${unavailCount})`;
+      if (unavailable.length > 0) {
+        unavailSection.textContent = `Niedostępne (${unavailable.length})`;
         unavailSection.style.display = '';
       } else {
         unavailSection.style.display = 'none';
       }
     }
-
-    // Only do full DOM rebuild when the tool list actually changed in size.
-    // This prevents sidebar flicker caused by repeated innerHTML resets during the 60s polling loop.
-    const listChanged = availCount !== this._lastSidebarAvailCount || unavailCount !== this._lastSidebarUnavailCount;
-
+    // Rebuild tool nav items
     const toolsContainer = this.shadowRoot?.querySelector('.nav-tools-list');
     const unavailContainer = this.shadowRoot?.querySelector('.nav-unavail-list');
-
-    if (listChanged && toolsContainer) {
-      this._lastSidebarAvailCount = availCount;
-      this._lastSidebarUnavailCount = unavailCount;
-
-      toolsContainer.innerHTML = available.map(t => `
-        <div class="nav-item${this._activeToolId === t.id ? ' active' : ''}" data-tool="${t.id}" data-tag="${t.tag}">
+    if (toolsContainer) {
+      // Build grouped sidebar with collapse/expand
+      const parents = available.filter(t => !t.group);
+      const children = available.filter(t => t.group);
+      let html = '';
+      for (const t of parents) {
+        const isActive = this._activeToolId === t.id;
+        const myChildren = children.filter(c => c.group === t.id);
+        const childActive = myChildren.some(c => this._activeToolId === c.id);
+        const isCollapsed = this._collapsedGroups.has(t.id) && !childActive;
+        const chevron = myChildren.length ? `<span class="nav-expand${isCollapsed ? ' collapsed' : ''}">&#9662;</span>` : '';
+        html += `<div class="nav-item${isActive || childActive ? ' active' : ''}${myChildren.length ? ' has-children' : ''}" data-tool="${t.id}" data-tag="${t.tag || ''}">
           <span class="nav-icon">${t.icon}</span>
           <span>${t.name}</span>
-        </div>
-      `).join('');
-      toolsContainer.querySelectorAll('.nav-item[data-tool]').forEach(item => {
+          ${chevron}
+        </div>`;
+        if (myChildren.length) {
+          html += `<div class="nav-group-children${isCollapsed ? ' collapsed' : ''}" data-group="${t.id}">`;
+          for (const c of myChildren) {
+            html += `<div class="nav-item child${this._activeToolId === c.id ? ' active' : ''}" data-tool="${c.id}" data-tag="${c.tag}">
+              <span class="nav-icon">${c.icon}</span>
+              <span>${c.name}</span>
+            </div>`;
+          }
+          html += '</div>';
+        }
+      }
+      toolsContainer.innerHTML = html;
+      // Toggle collapse on parent click (expand chevron area)
+      toolsContainer.querySelectorAll('.nav-item.has-children').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const toolId = item.dataset.tool;
+          const tag = item.dataset.tag;
+          // If parent has a real tag (is a tool itself), load it AND toggle children
+          if (tag) {
+            this._setActiveNav(item);
+            this._loadTool(toolId, tag);
+          }
+          // Toggle children visibility
+          const groupEl = toolsContainer.querySelector(`.nav-group-children[data-group="${toolId}"]`);
+          if (groupEl) {
+            const wasCollapsed = this._collapsedGroups.has(toolId);
+            if (wasCollapsed) {
+              this._collapsedGroups.delete(toolId);
+              groupEl.classList.remove('collapsed');
+              item.querySelector('.nav-expand')?.classList.remove('collapsed');
+            } else {
+              this._collapsedGroups.add(toolId);
+              groupEl.classList.add('collapsed');
+              item.querySelector('.nav-expand')?.classList.add('collapsed');
+            }
+          }
+        });
+      });
+      // Click handler for child items
+      toolsContainer.querySelectorAll('.nav-item.child').forEach(item => {
         item.addEventListener('click', () => {
           this._setActiveNav(item);
           this._loadTool(item.dataset.tool, item.dataset.tag);
         });
       });
-
-      if (unavailContainer) {
-        if (unavailCount > 0) {
-          unavailContainer.innerHTML = unavailable.map(t => `
-            <div class="nav-item unavailable" title="Nie zainstalowane">
-              <span class="nav-icon">${t.icon}</span>
-              <span>${t.name}</span>
-            </div>
-          `).join('');
-          unavailContainer.style.display = '';
-        } else {
-          unavailContainer.innerHTML = '';
-          unavailContainer.style.display = 'none';
-        }
-      }
-    } else if (!listChanged && toolsContainer) {
-      // List unchanged \u2014 just sync the active class without touching DOM structure
-      toolsContainer.querySelectorAll('.nav-item[data-tool]').forEach(item => {
-        if (item.dataset.tool === this._activeToolId) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
+      // Click handler for non-group items
+      toolsContainer.querySelectorAll('.nav-item:not(.has-children):not(.child)').forEach(item => {
+        item.addEventListener('click', () => {
+          this._setActiveNav(item);
+          this._loadTool(item.dataset.tool, item.dataset.tag);
+        });
       });
+    }
+    if (unavailContainer) {
+      if (unavailable.length > 0) {
+        unavailContainer.innerHTML = unavailable.map(t => `
+          <div class="nav-item unavailable" title="Nie zainstalowane">
+            <span class="nav-icon">${t.icon}</span>
+            <span>${t.name}</span>
+          </div>
+        `).join('');
+        unavailContainer.style.display = '';
+      } else {
+        unavailContainer.innerHTML = '';
+        unavailContainer.style.display = 'none';
+      }
     }
   }
 
   static get TOOLS() {
     return [
-      { id: 'trace-viewer', name: 'Trace Viewer', icon: '\u{1F9EC}', tag: 'ha-trace-viewer', desc: 'Przegl\u0105daj i analizuj \u015blady automatyzacji', repo: 'MacSiem/ha-trace-viewer', category: 'debug' },
-      { id: 'device-health', name: 'Device Health', icon: '\u{1F3E5}', tag: 'ha-device-health', desc: 'Monitoruj stan urz\u0105dze\u0144, baterii i sieci', repo: 'MacSiem/ha-device-health', category: 'monitor' },
-      { id: 'automation-analyzer', name: 'Automation Analyzer', icon: '\u{1F4CA}', tag: 'ha-automation-analyzer', desc: 'Analizuj wydajno\u015b\u0107 i problemy automatyzacji', repo: 'MacSiem/ha-automation-analyzer', category: 'debug' },
-      { id: 'backup-manager', name: 'Backup Manager', icon: '\u{1F4BE}', tag: 'ha-backup-manager', desc: 'Zarz\u0105dzaj kopiami zapasowymi', repo: 'MacSiem/ha-backup-manager', category: 'system' },
-      { id: 'network-map', name: 'Network Map', icon: '\u{1F310}', tag: 'ha-network-map', desc: 'Wizualizuj map\u0119 sieci urz\u0105dze\u0144', repo: 'MacSiem/ha-network-map', category: 'monitor' },
-      { id: 'smart-reports', name: 'Smart Reports', icon: '\u{1F4C8}', tag: 'ha-smart-reports', desc: 'Generuj inteligentne raporty', repo: 'MacSiem/ha-smart-reports', category: 'reports' },
-      { id: 'energy-optimizer', name: 'Energy Optimizer', icon: '\u26A1', tag: 'ha-energy-optimizer', desc: 'Optymalizuj zu\u017cycie energii', repo: 'MacSiem/ha-energy-optimizer', category: 'monitor' },
-      { id: 'sentence-manager', name: 'Sentence Manager', icon: '\u{1F5E3}\uFE0F', tag: 'ha-sentence-manager', desc: 'Zarz\u0105dzaj zdaniami g\u0142osowymi', repo: 'MacSiem/ha-sentence-manager', category: 'system' },
-      { id: 'chore-tracker', name: 'Chore Tracker', icon: '\u{1F3E0}', tag: 'ha-chore-tracker', desc: '\u015aledzenie obowi\u0105zk\u00f3w domowych', repo: 'MacSiem/ha-chore-tracker', category: 'life' },
-      { id: 'baby-tracker', name: 'Baby Tracker', icon: '\u{1F37C}', tag: 'ha-baby-tracker', desc: '\u015aledzenie aktywno\u015bci dziecka', repo: 'MacSiem/ha-baby-tracker', category: 'life' },
-      { id: 'cry-analyzer', name: 'Cry Analyzer', icon: '\u{1F476}', tag: 'ha-cry-analyzer', desc: 'Analiza p\u0142aczu dziecka AI', repo: 'MacSiem/ha-cry-analyzer', category: 'life' },
-      { id: 'data-exporter', name: 'Data Exporter', icon: '\u{1F4E4}', tag: 'ha-data-exporter', desc: 'Eksportuj dane z Home Assistant', repo: 'MacSiem/ha-data-exporter', category: 'system' },
-      { id: 'storage-monitor', name: 'Storage Monitor', icon: '\u{1F4BD}', tag: 'ha-storage-monitor', desc: 'Wizualizacja u\u017cycia dysku w stylu WinDirStat', repo: 'MacSiem/ha-storage-monitor', category: 'system' },
-      { id: 'security-check', name: 'Security Check', icon: '\u{1F6E1}\uFE0F', tag: 'ha-security-check', desc: 'Audyt bezpiecze\u0144stwa Home Assistant', repo: 'MacSiem/ha-security-check', category: 'system' },
-      { id: 'log-email', name: 'Log Email', icon: '\uD83D\uDEA8', tag: 'ha-log-email', desc: 'Email digest b\u0142\u0119d\u00F3w i ostrze\u017Ce\u0144 HA', repo: 'MacSiem/ha-log-email', category: 'reports' },
-      { id: 'yaml-checker', name: 'YAML Checker', icon: '\uD83D\uDD0D', tag: 'ha-yaml-checker', desc: 'Walidator YAML: config check, encje, szablony', repo: 'MacSiem/ha-yaml-checker', category: 'debug' },
-      { id: 'energy-insights', name: 'Energy Insights', icon: '\u26A1', tag: 'ha-energy-insights', desc: 'Dashboard energii: zu\u017Cycie, koszty, top urz\u0105dzenia, trendy', repo: 'MacSiem/ha-energy-insights', category: 'monitor' },
-      { id: 'energy-email', name: 'Energy Email', icon: '\uD83D\uDCE7', tag: 'ha-energy-email', desc: 'Dzienne/tygodniowe/miesi\u0119czne raporty energii emailem', repo: 'MacSiem/ha-energy-email', category: 'reports' },
-      { id: 'vacuum-water-monitor', name: 'Vacuum Water Monitor', icon: '\uD83E\uDDF9', tag: 'ha-vacuum-water-monitor', desc: 'Monitor poziomu wody i serwisu dla odkurzaczy (Roborock, Dreame)', repo: 'MacSiem/ha-vacuum-water-monitor', category: 'monitor' },
+      { id: 'advanced-tools', name: 'Advanced Tools', icon: '\u{1F527}', tag: null, desc: 'Zaawansowane narz\u0119dzia', category: 'debug' },
+      { id: 'trace-viewer', group: 'advanced-tools', name: 'Trace Viewer', icon: '\u{1F9EC}', tag: 'ha-trace-viewer', desc: 'Przeglądaj i analizuj ślady automatyzacji', repo: 'MacSiem/ha-trace-viewer', category: 'debug' },
+      { id: 'device-health', name: 'Device Health', icon: '\u{1F3E5}', tag: 'ha-device-health', desc: 'Monitoruj stan urządzeń, baterii i sieci', repo: 'MacSiem/ha-device-health', category: 'monitor' },
+      { id: 'automation-analyzer', group: 'advanced-tools', name: 'Automation Analyzer', icon: '\u{1F4CA}', tag: 'ha-automation-analyzer', desc: 'Analizuj wydajność i problemy automatyzacji', repo: 'MacSiem/ha-automation-analyzer', category: 'debug' },
+      { id: 'backup-manager', group: 'device-health', name: 'Backup Manager', icon: '\u{1F4BE}', tag: 'ha-backup-manager', desc: 'Zarządzaj kopiami zapasowymi', repo: 'MacSiem/ha-backup-manager', category: 'system' },
+      { id: 'network-map', group: 'device-health', name: 'Network Map', icon: '\u{1F310}', tag: 'ha-network-map', desc: 'Wizualizuj mapę sieci urządzeń', repo: 'MacSiem/ha-network-map', category: 'monitor' },
+      { id: 'smart-reports', name: 'Smart Reports & Energy', icon: '\u{1F4C8}', tag: 'ha-smart-reports', desc: 'Raporty i analiza energii', repo: 'MacSiem/ha-smart-reports', category: 'reports' },
+      { id: 'energy-optimizer', group: 'smart-reports', name: 'Energy Optimizer', icon: '\u26A1', tag: 'ha-energy-optimizer', desc: 'Optymalizuj zużycie energii', repo: 'MacSiem/ha-energy-optimizer', category: 'monitor' },
+      { id: 'sentence-manager', group: 'advanced-tools', name: 'Sentence Manager', icon: '\u{1F5E3}\uFE0F', tag: 'ha-sentence-manager', desc: 'Zarządzaj zdaniami głosowymi', repo: 'MacSiem/ha-sentence-manager', category: 'system' },
+      { id: 'home-family', name: 'Home & Family', icon: '\u{1F3E1}', tag: null, desc: 'Dom i rodzina', category: 'life' },
+      { id: 'chore-tracker', group: 'home-family', name: 'Chore Tracker', icon: '\u{1F3E0}', tag: 'ha-chore-tracker', desc: 'Śledzenie obowiązków domowych', repo: 'MacSiem/ha-chore-tracker', category: 'life' },
+      { id: 'baby-tracker', group: 'home-family', name: 'Baby Tracker', icon: '\u{1F37C}', tag: 'ha-baby-tracker', desc: 'Śledzenie aktywności dziecka', repo: 'MacSiem/ha-baby-tracker', category: 'life' },
+      { id: 'cry-analyzer', group: 'home-family', name: 'Cry Analyzer', icon: '\u{1F476}', tag: 'ha-cry-analyzer', desc: 'Analiza płaczu dziecka AI', repo: 'MacSiem/ha-cry-analyzer', category: 'life' },
+      { id: 'data-exporter', group: 'advanced-tools', name: 'Data Exporter', icon: '\u{1F4E4}', tag: 'ha-data-exporter', desc: 'Eksportuj dane z Home Assistant', repo: 'MacSiem/ha-data-exporter', category: 'system' },
+      { id: 'storage-monitor', group: 'device-health', name: 'Storage Monitor', icon: '\u{1F4BD}', tag: 'ha-storage-monitor', desc: 'Wizualizacja użycia dysku w stylu WinDirStat', repo: 'MacSiem/ha-storage-monitor', category: 'system' },
+      { id: 'security-check', group: 'device-health', name: 'Security Check', icon: '\u{1F6E1}\uFE0F', tag: 'ha-security-check', desc: 'Audyt bezpieczeństwa Home Assistant', repo: 'MacSiem/ha-security-check', category: 'system' },
+      { id: 'log-email', group: 'advanced-tools', name: 'Log Email', icon: '\uD83D\uDEA8', tag: 'ha-log-email', desc: 'Email digest b\u0142\u0119d\u00F3w i ostrze\u017Ce\u0144 HA', repo: 'MacSiem/ha-log-email', category: 'reports' },
+      { id: 'purge-cache', group: 'advanced-tools', name: 'Purge Cache', icon: '\u{1F9F9}', tag: 'ha-purge-cache', desc: 'Wyczy\u015B\u0107 cache przegl\u0105darki i skrypt\u00F3w', repo: 'MacSiem/ha-tools-panel', category: 'system' },
+      { id: 'yaml-checker', group: 'advanced-tools', name: 'YAML Checker', icon: '\uD83D\uDD0D', tag: 'ha-yaml-checker', desc: 'Walidator YAML: config check, encje, szablony', repo: 'MacSiem/ha-yaml-checker', category: 'debug' },
+      { id: 'energy-insights', group: 'smart-reports', name: 'Energy Insights', icon: '\u26A1', tag: 'ha-energy-insights', desc: 'Dashboard energii: zu\u017Cycie, koszty, top urz\u0105dzenia, trendy', repo: 'MacSiem/ha-energy-insights', category: 'monitor' },
+      { id: 'energy-email', group: 'smart-reports', name: 'Energy Email', icon: '\uD83D\uDCE7', tag: 'ha-energy-email', desc: 'Dzienne/tygodniowe/miesi\u0119czne raporty energii emailem', repo: 'MacSiem/ha-energy-email', category: 'reports' },
+      { id: 'vacuum-water-monitor', group: 'home-family', name: 'Vacuum Water Monitor', icon: '\uD83E\uDDF9', tag: 'ha-vacuum-water-monitor', desc: 'Monitor poziomu wody i serwisu dla odkurzaczy (Roborock, Dreame)', repo: 'MacSiem/ha-vacuum-water-monitor', category: 'monitor' },
     ];
   }
 
@@ -260,7 +299,7 @@ class HAToolsPanel extends HTMLElement {
       debug: { name: 'Debugowanie', icon: '\u{1F527}' },
       system: { name: 'System', icon: '\u2699\uFE0F' },
       reports: { name: 'Raporty', icon: '\u{1F4C4}' },
-      life: { name: '\u017bycie', icon: '\u{1F3E1}' },
+      life: { name: 'Życie', icon: '\u{1F3E1}' },
     };
   }
 
@@ -331,7 +370,6 @@ class HAToolsPanel extends HTMLElement {
 .sidebar {
   width: 260px;
   background: var(--bento-card);
-  contain: layout style; /* Isolate reflows to prevent flicker on DOM updates */
   border-right: 1px solid var(--bento-border);
   display: flex;
   flex-direction: column;
@@ -418,6 +456,34 @@ class HAToolsPanel extends HTMLElement {
   text-align: center;
 }
 
+.nav-item.child {
+  padding-left: 32px !important;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.nav-item.child .nav-icon { font-size: 12px; }
+.nav-item.child:hover { opacity: 1; }
+.nav-item.has-children { cursor: pointer; }
+.nav-group-children {
+  overflow: hidden;
+  max-height: 500px;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+  opacity: 1;
+}
+.nav-group-children.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-expand {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.5;
+  transition: transform 0.25s ease;
+}
+.nav-expand.collapsed {
+  transform: rotate(-90deg);
+}
 .nav-item .nav-badge {
   margin-left: auto;
   background: var(--bento-border);
@@ -535,6 +601,46 @@ class HAToolsPanel extends HTMLElement {
 .home-section { margin-bottom: 32px; }
 .home-section-title { font-size: 16px; font-weight: 600; color: var(--bento-text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .home-section-title .count { background: var(--bento-border); color: var(--bento-text-secondary); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+/* Home Hero */
+.home-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--bento-primary-light) 0%, rgba(16, 185, 129, 0.06) 100%);
+  border: 1.5px solid var(--bento-border);
+  border-radius: var(--bento-radius);
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.hero-title { font-size: 22px; font-weight: 700; color: var(--bento-text); }
+.hero-subtitle { font-size: 13px; color: var(--bento-text-secondary); margin-top: 4px; }
+.hero-stats { display: flex; gap: 24px; }
+.hero-stat { text-align: center; }
+.hero-stat-num { display: block; font-size: 28px; font-weight: 700; color: var(--bento-primary); }
+.hero-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--bento-text-secondary); font-weight: 600; }
+.groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.group-card { display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bento-card); border: 1.5px solid var(--bento-border); border-radius: var(--bento-radius); cursor: pointer; transition: var(--bento-transition); }
+.group-card:hover { border-color: var(--bento-primary); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.group-card-icon { font-size: 28px; }
+.group-card-name { font-size: 14px; font-weight: 600; color: var(--bento-text); }
+.group-card-count { font-size: 11px; color: var(--bento-text-secondary); }
+.group-card-tools { font-size: 14px; margin-left: auto; opacity: 0.7; }
+.tips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.tip-card { display: flex; gap: 12px; padding: 14px; background: var(--bento-card); border: 1.5px solid var(--bento-border); border-radius: var(--bento-radius); font-size: 12px; line-height: 1.5; color: var(--bento-text-secondary); }
+.tip-icon { font-size: 22px; flex-shrink: 0; }
+.tip-text strong { color: var(--bento-text); font-size: 13px; }
+.changelog-card { background: var(--bento-card); border: 1.5px solid var(--bento-border); border-radius: var(--bento-radius); padding: 16px; }
+.cl-item { padding: 6px 0; font-size: 13px; color: var(--bento-text); display: flex; align-items: center; gap: 8px; }
+.cl-item + .cl-item { border-top: 1px solid var(--bento-border); }
+.cl-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+.cl-tag.new { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.cl-tag.fix { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+@media (max-width: 768px) {
+  .home-hero { flex-direction: column; align-items: flex-start; }
+  .groups-grid, .tips-grid { grid-template-columns: 1fr; }
+}
 
 .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 .tool-card { background: var(--bento-card); border: 1px solid var(--bento-border); border-radius: var(--bento-radius); padding: 20px; cursor: pointer; transition: var(--bento-transition); animation: fadeSlideIn 0.4s ease-out; }
@@ -813,8 +919,8 @@ class HAToolsPanel extends HTMLElement {
 
   _getToolStatus() {
     const tools = HAToolsPanel.TOOLS;
-    const available = tools.filter(t => customElements.get(t.tag));
-    const unavailable = tools.filter(t => !customElements.get(t.tag));
+    const available = tools.filter(t => !t.tag || customElements.get(t.tag));
+    const unavailable = tools.filter(t => t.tag && !customElements.get(t.tag));
     return { tools, available, unavailable };
   }
 
@@ -1055,17 +1161,36 @@ ${HAToolsPanel.CSS}</style>
               <span class="nav-badge">${available.length}/${HAToolsPanel.TOOLS.length}</span>
             </div>
 
-            <div class="nav-section nav-section-tools">Narz\u0119dzia (${available.length})</div>
+            <div class="nav-section nav-section-tools">Narzędzia (${available.length})</div>
             <div class="nav-tools-list">
-              ${available.map(t => `
-                <div class="nav-item" data-tool="${t.id}" data-tag="${t.tag}">
-                  <span class="nav-icon">${t.icon}</span>
-                  <span>${t.name}</span>
-                </div>
-              `).join('')}
+              ${(() => {
+                const parents = available.filter(t => !t.group);
+                const children = available.filter(t => t.group);
+                let h = '';
+                for (const t of parents) {
+                  const myChildren = children.filter(c => c.group === t.id);
+                  const chevron = myChildren.length ? '<span class="nav-expand">&#9662;</span>' : '';
+                  h += `<div class="nav-item${myChildren.length ? ' has-children' : ''}" data-tool="${t.id}" data-tag="${t.tag || ''}">
+                    <span class="nav-icon">${t.icon}</span>
+                    <span>${t.name}</span>
+                    ${chevron}
+                  </div>`;
+                  if (myChildren.length) {
+                    h += `<div class="nav-group-children" data-group="${t.id}">`;
+                    for (const c of myChildren) {
+                      h += `<div class="nav-item child" data-tool="${c.id}" data-tag="${c.tag}">
+                        <span class="nav-icon">${c.icon}</span>
+                        <span>${c.name}</span>
+                      </div>`;
+                    }
+                    h += '</div>';
+                  }
+                }
+                return h;
+              })()}
             </div>
 
-            <div class="nav-section nav-section-unavailable" ${unavailable.length === 0 ? 'style="display:none"' : ''}>Niedost\u0119pne (${unavailable.length})</div>
+            <div class="nav-section nav-section-unavailable" ${unavailable.length === 0 ? 'style="display:none"' : ''}>Niedostępne (${unavailable.length})</div>
             <div class="nav-unavail-list" ${unavailable.length === 0 ? 'style="display:none"' : ''}>
               ${unavailable.map(t => `
                 <div class="nav-item unavailable" title="Nie zainstalowane">
@@ -1088,8 +1213,8 @@ ${HAToolsPanel.CSS}</style>
           <div class="toolbar">
             <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button><div class="toolbar-title" id="title">\u{1F3E0} Home</div>
             <div class="toolbar-actions" id="toolbarActions" style="display:none">
-              <button class="btn-icon" id="refreshBtn" title="Od\u015bwie\u017c dane">&#x21bb;</button>
-              <label class="ar-toggle" title="Auto-od\u015bwie\u017canie co 30s">
+              <button class="btn-icon" id="refreshBtn" title="Odśwież dane">&#x21bb;</button>
+              <label class="ar-toggle" title="Auto-odświeżanie co 30s">
                 <input type="checkbox" id="autoRefreshCb">
                 <span class="ar-track"><span class="ar-thumb"></span></span>
                 <span class="ar-lbl">Auto</span>
@@ -1210,83 +1335,164 @@ ${HAToolsPanel.CSS}</style>
 
     const { available, unavailable } = this._getToolStatus();
     const cats = HAToolsPanel.CATEGORIES;
+    const tools = HAToolsPanel.TOOLS;
     const content = this.shadowRoot.getElementById('content');
+
+    // Collect system info
+    const haVersion = this._hass?.config?.version || '?';
+    const haLocation = this._hass?.config?.location_name || 'Home';
+    const entityCount = this._hass?.states ? Object.keys(this._hass.states).length : 0;
+    const autoCount = this._hass?.states ? Object.keys(this._hass.states).filter(k => k.startsWith('automation.')).length : 0;
+    const sensorCount = this._hass?.states ? Object.keys(this._hass.states).filter(k => k.startsWith('sensor.')).length : 0;
+
+    // Group info
+    const parents = tools.filter(t => !t.group && t.tag);
+    const groupParents = tools.filter(t => !t.group && !t.tag);
+    const children = tools.filter(t => t.group);
+    const groupCount = groupParents.length + parents.filter(t => children.some(c => c.group === t.id)).length;
+
+    // Build category stats
+    const catStats = {};
+    for (const t of available) {
+      const cat = t.category || 'other';
+      catStats[cat] = (catStats[cat] || 0) + 1;
+    }
 
     content.innerHTML = `
       <div class="home-view">
-        <div class="home-section">
-          <div class="home-section-title">
-            \u2705 Zainstalowane narz\u0119dzia <span class="count">(${available.length} z ${HAToolsPanel.TOOLS.length})</span>
+        <!-- System Overview -->
+        <div class="home-hero">
+          <div class="hero-greeting">
+            <div class="hero-title">\u{1F3E0} ${haLocation}</div>
+            <div class="hero-subtitle">Home Assistant ${haVersion} \u2022 ${entityCount} encji \u2022 ${autoCount} automatyzacji</div>
           </div>
-          ${available.length > 0 ? `
-            <div class="tools-grid">
-              ${available.map((t, i) => `
-                <div class="tool-card" data-tool="${t.id}" data-tag="${t.tag}" style="animation-delay: ${i * 50}ms">
-                  <div class="tool-card-header">
-                    <div class="tool-card-icon">${t.icon}</div>
-                    <div style="flex: 1">
-                      <div class="tool-card-name">${t.name}</div>
-                    </div>
-                  </div>
-                  <div class="tool-card-desc">${t.desc}</div>
-                  <div class="tool-card-footer">
-                    <span class="tool-card-category">${cats[t.category]?.name || t.category}</span>
-                    <span class="tool-card-status">(aktywne)</span>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span class="hero-stat-num">${available.length}</span>
+              <span class="hero-stat-label">Narz\u0119dzi</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-num">${groupCount}</span>
+              <span class="hero-stat-label">Grup</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-num">${sensorCount}</span>
+              <span class="hero-stat-label">Sensor\u00F3w</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Access Groups -->
+        <div class="home-section">
+          <div class="home-section-title">\u{1F4CB} Grupy narz\u0119dzi</div>
+          <div class="groups-grid">
+            ${[...groupParents, ...parents.filter(t => children.some(c => c.group === t.id))].map(g => {
+              const myChildren = children.filter(c => c.group === g.id);
+              return `<div class="group-card" data-tool="${g.id}">
+                <div class="group-card-icon">${g.icon}</div>
+                <div class="group-card-info">
+                  <div class="group-card-name">${g.name}</div>
+                  <div class="group-card-count">${myChildren.length} narz\u0119dzi</div>
+                </div>
+                <div class="group-card-tools">${myChildren.map(c => c.icon).join(' ')}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Standalone Tools -->
+        <div class="home-section">
+          <div class="home-section-title">\u2705 Narz\u0119dzia <span class="count">(${available.filter(t => !t.group && t.tag && !children.some(c => c.group === t.id)).length})</span></div>
+          <div class="tools-grid">
+            ${available.filter(t => !t.group && t.tag && !children.some(c => c.group === t.id)).map((t, i) => `
+              <div class="tool-card" data-tool="${t.id}" data-tag="${t.tag}" style="animation-delay: ${i * 50}ms">
+                <div class="tool-card-header">
+                  <div class="tool-card-icon">${t.icon}</div>
+                  <div style="flex: 1">
+                    <div class="tool-card-name">${t.name}</div>
                   </div>
                 </div>
-              `).join('')}
+                <div class="tool-card-desc">${t.desc}</div>
+                <div class="tool-card-footer">
+                  <span class="tool-card-category">${cats[t.category]?.name || t.category}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Tips & Shortcuts -->
+        <div class="home-section">
+          <div class="home-section-title">\u{1F4A1} Wskaz\u00F3wki</div>
+          <div class="tips-grid">
+            <div class="tip-card">
+              <div class="tip-icon">\u26A1</div>
+              <div class="tip-text"><strong>Hard Reload</strong><br>Ctrl+Shift+R wymusza pobranie nowej wersji JS z serwera.</div>
             </div>
-          ` : '<div style="color:#64748B;font-size:13px;">Brak zainstalowanych narz\u0119dzi.</div>'}
+            <div class="tip-card">
+              <div class="tip-icon">\u{1F9F9}</div>
+              <div class="tip-text"><strong>Purge Cache</strong><br>U\u017Cyj narz\u0119dzia Purge Cache (Advanced Tools) aby wyczy\u015Bci\u0107 localStorage i cache.</div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">\u{1F4BE}</div>
+              <div class="tip-text"><strong>Backup</strong><br>Regularne backupy HA chroni\u0105 konfiguracj\u0119. Backup Manager poka\u017Ce dost\u0119pne kopie.</div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">\u{1F50D}</div>
+              <div class="tip-text"><strong>YAML Checker</strong><br>Przed restartem HA u\u017Cyj YAML Checker aby sprawdzi\u0107 poprawno\u015B\u0107 konfiguracji.</div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">\u{1F4CA}</div>
+              <div class="tip-text"><strong>Automatyzacje</strong><br>Automation Analyzer poka\u017Ce statystyki i problemy z automatyzacjami.</div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">\u{1F6E1}\uFE0F</div>
+              <div class="tip-text"><strong>Bezpiecze\u0144stwo</strong><br>Security Check audytuje konfiguracj\u0119 HA i wykrywa potencjalne zagro\u017Cenia.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Changelog -->
+        <div class="home-section">
+          <div class="home-section-title">\u{1F4DD} Ostatnie zmiany <span class="count">v3.3.0</span></div>
+          <div class="changelog-card">
+            <div class="cl-item"><span class="cl-tag new">NEW</span> Purge Cache \u2014 narz\u0119dzie do czyszczenia cache przegl\u0105darki</div>
+            <div class="cl-item"><span class="cl-tag new">NEW</span> Grupowanie narz\u0119dzi z animacj\u0105 collapse/expand</div>
+            <div class="cl-item"><span class="cl-tag new">NEW</span> 4 grupy: Advanced Tools, Device Health, Smart Reports & Energy, Home & Family</div>
+            <div class="cl-item"><span class="cl-tag fix">FIX</span> Wszystkie narz\u0119dzia w jednym katalogu ha-tools-panel/</div>
+            <div class="cl-item"><span class="cl-tag fix">FIX</span> Naprawiony mojibake w YAML Checker (polskie znaki i emoji)</div>
+            <div class="cl-item"><span class="cl-tag new">NEW</span> Przebudowany Home z informacjami systemowymi i wskaz\u00F3wkami</div>
+          </div>
         </div>
 
         ${unavailable.length > 0 ? `
           <div class="home-section">
             <div class="home-section-title">
-              ${this._loading ? '\u23F3' : '\u{1F4E6}'} ${this._loading ? '\u0141adowanie narz\u0119dzi...' : 'Dost\u0119pne do instalacji'} <span class="count">(${unavailable.length})</span>
+              ${this._loading ? '\u23F3' : '\u{1F4E6}'} ${this._loading ? '\u0141adowanie...' : 'Dost\u0119pne do instalacji'} <span class="count">(${unavailable.length})</span>
             </div>
-            ${this._loading ? `
-              <div class="uninstalled-list">
-                ${unavailable.map(t => `
-                  <div class="uninstalled-item loading-item">
-                    <div class="ui-icon">${t.icon}</div>
-                    <div class="ui-name">${t.name}</div>
-                    <div class="ui-desc">\u0141adowanie...</div>
-                  </div>
-                `).join('')}
-              </div>
-            ` : `
-              <div class="uninstalled-list">
-                ${unavailable.map(t => `
-                  <div class="uninstalled-item">
-                    <div class="ui-icon">${t.icon}</div>
-                    <div class="ui-name">${t.name}</div>
-                    <div class="ui-desc">${t.desc}</div>
-                    <a class="btn btn-secondary btn-sm" href="https://github.com/${t.repo}" target="_blank" rel="noopener">
-                      GitHub
-                    </a>
-                    <a class="btn btn-primary btn-sm hacs-install" data-repo="${t.repo}">
-                      \u{1F4E5} Zainstaluj (HACS)
-                    </a>
-                  </div>
-                `).join('')}
-              </div>
-            `}
+            <div class="uninstalled-list">
+              ${unavailable.map(t => `
+                <div class="uninstalled-item">
+                  <div class="ui-icon">${t.icon}</div>
+                  <div class="ui-name">${t.name}</div>
+                  <div class="ui-desc">${t.desc}</div>
+                  <a class="btn btn-secondary btn-sm" href="https://github.com/${t.repo}" target="_blank" rel="noopener">GitHub</a>
+                </div>
+              `).join('')}
+            </div>
           </div>
         ` : ''}
 
+        <!-- Donate -->
         <div class="home-section">
           <div class="donate-section">
             <div class="donate-text">
-              <h3>\u2764\uFE0F Wesprzyj rozw\u00f3j HA Tools</h3>
-              <p>Je\u015bli HA Tools u\u0142atwia Ci \u017cycie z Home Assistant, rozwa\u017c wsparcie projektu. Ka\u017cda kawa motywuje do dalszego rozwoju!</p>
+              <h3>\u2764\uFE0F Wesprzyj rozw\u00F3j HA Tools</h3>
+              <p>Je\u015Bli HA Tools u\u0142atwia Ci \u017Cycie z Home Assistant, rozwa\u017C wsparcie projektu. Ka\u017Cda kawa motywuje do dalszego rozwoju!</p>
             </div>
             <div class="donate-buttons">
-              <a class="donate-btn coffee" href="https://buymeacoffee.com/macsiem" target="_blank" rel="noopener">
-                \u2615 Buy Me a Coffee
-              </a>
-              <a class="donate-btn paypal" href="https://www.paypal.com/donate/?hosted_button_id=Y967H4PLRBN8W" target="_blank" rel="noopener">
-                \u{1F4B3} PayPal
-              </a>
+              <a class="donate-btn coffee" href="https://buymeacoffee.com/macsiem" target="_blank" rel="noopener">\u2615 Buy Me a Coffee</a>
+              <a class="donate-btn paypal" href="https://www.paypal.com/donate/?hosted_button_id=Y967H4PLRBN8W" target="_blank" rel="noopener">\u{1F4B3} PayPal</a>
             </div>
           </div>
         </div>
@@ -1306,12 +1512,32 @@ ${HAToolsPanel.CSS}</style>
       });
     });
 
+    // Bind group card clicks — click to expand group in sidebar and show first child tool
+    content.querySelectorAll('.group-card[data-tool]').forEach(card => {
+      card.addEventListener('click', () => {
+        const groupId = card.dataset.tool;
+        const firstChild = HAToolsPanel.TOOLS.find(t => t.group === groupId);
+        if (firstChild) {
+          const navItem = this.shadowRoot.querySelector(`.nav-item[data-tool="${firstChild.id}"]`);
+          if (navItem) {
+            // Expand group in sidebar
+            this._collapsedGroups.delete(groupId);
+            const groupEl = this.shadowRoot.querySelector(`.nav-group-children[data-group="${groupId}"]`);
+            const chevron = this.shadowRoot.querySelector(`.nav-item[data-tool="${groupId}"] .nav-expand`);
+            if (groupEl) groupEl.classList.remove('collapsed');
+            if (chevron) chevron.classList.remove('collapsed');
+            this._setActiveNav(navItem);
+            this._loadTool(firstChild.id, firstChild.tag);
+          }
+        }
+      });
+    });
+
     // HACS install buttons
     content.querySelectorAll('.hacs-install').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const repo = btn.dataset.repo;
-        // Open HACS custom repo dialog via HA
         const hacsUrl = `/hacs/repository/${repo.replace('/', '%2F')}`;
         window.open(hacsUrl, '_blank');
       });
@@ -1339,14 +1565,14 @@ ${HAToolsPanel.CSS}</style>
         <!-- General Settings -->
         <div class="settings-group">
           <div class="settings-group-header" data-group="general">
-            \u2699\uFE0F Ustawienia og\u00f3lne
+            \u2699\uFE0F Ustawienia ogólne
             <span class="chevron">\u25BC</span>
           </div>
           <div class="settings-group-body" data-body="general">
             <div class="setting-row">
               <div class="setting-info">
-                <div class="setting-label">J\u0119zyk</div>
-                <div class="setting-desc">J\u0119zyk interfejsu panelu</div>
+                <div class="setting-label">Język</div>
+                <div class="setting-desc">Język interfejsu panelu</div>
               </div>
               <div class="setting-control">
                 <select class="setting-select" data-setting="language">
@@ -1357,8 +1583,8 @@ ${HAToolsPanel.CSS}</style>
             </div>
             <div class="setting-row">
               <div class="setting-info">
-                <div class="setting-label">Domy\u015blny widok</div>
-                <div class="setting-desc">Co pokaza\u0107 po otwarciu HA Tools</div>
+                <div class="setting-label">Domyślny widok</div>
+                <div class="setting-desc">Co pokazać po otwarciu HA Tools</div>
               </div>
               <div class="setting-control">
                 <select class="setting-select" data-setting="defaultTool">
@@ -1370,7 +1596,7 @@ ${HAToolsPanel.CSS}</style>
             <div class="setting-row">
               <div class="setting-info">
                 <div class="setting-label">Animacje</div>
-                <div class="setting-desc">W\u0142\u0105cz animacje przej\u015b\u0107</div>
+                <div class="setting-desc">Włącz animacje przejść</div>
               </div>
               <div class="setting-control">
                 <label class="setting-toggle">
@@ -1382,7 +1608,7 @@ ${HAToolsPanel.CSS}</style>
             <div class="setting-row">
               <div class="setting-info">
                 <div class="setting-label">Tryb kompaktowy</div>
-                <div class="setting-desc">Mniejsze odst\u0119py, mniej miejsca na ekranie</div>
+                <div class="setting-desc">Mniejsze odstępy, mniej miejsca na ekranie</div>
               </div>
               <div class="setting-control">
                 <label class="setting-toggle">
@@ -1394,26 +1620,26 @@ ${HAToolsPanel.CSS}</style>
           </div>
         </div>
 
-        <!-- Trace Viewer \u2014 Backend Settings -->
+        <!-- Trace Viewer — Backend Settings -->
         <div class="settings-group">
           <div class="settings-group-header" data-group="trace-backend">
-            \u{1F9EC} Trace Viewer \u2014 Przechowywanie
+            \u{1F9EC} Trace Viewer — Przechowywanie
             <span class="chevron">\u25BC</span>
           </div>
           <div class="settings-group-body" data-body="trace-backend">
             <div class="trace-current-info">
-              \u{1F4CA} Obecne ustawienie HA: <span class="val">stored_traces = 5</span> (domy\u015blne per automatyzacja)
+              \u{1F4CA} Obecne ustawienie HA: <span class="val">stored_traces = 5</span> (domyślne per automatyzacja)
             </div>
 
-            <div class="setting-subsection">Ilo\u015b\u0107 traces</div>
+            <div class="setting-subsection">Ilość traces</div>
             <div class="setting-row">
               <div class="setting-info">
                 <div class="setting-label">Przechowuj N ostatnich traces</div>
-                <div class="setting-desc">Ile trace'\u00f3w HA ma przechowywa\u0107 na automatyzacj\u0119 (domy\u015blnie 5). Zmiana dotyczy WSZYSTKICH automatyzacji.</div>
+                <div class="setting-desc">Ile trace'ów HA ma przechowywać na automatyzację (domyślnie 5). Zmiana dotyczy WSZYSTKICH automatyzacji.</div>
               </div>
               <div class="setting-control">
                 <select class="setting-select" id="storedTracesCount">
-                  <option value="5" ${this._getSetting('trace.storedCount', 20) == 5 ? 'selected' : ''}>5 (domy\u015blne)</option>
+                  <option value="5" ${this._getSetting('trace.storedCount', 20) == 5 ? 'selected' : ''}>5 (domyślne)</option>
                   <option value="10" ${this._getSetting('trace.storedCount', 20) == 10 ? 'selected' : ''}>10</option>
                   <option value="20" ${this._getSetting('trace.storedCount', 20) == 20 ? 'selected' : ''}>20</option>
                   <option value="50" ${this._getSetting('trace.storedCount', 20) == 50 ? 'selected' : ''}>50</option>
@@ -1426,7 +1652,7 @@ ${HAToolsPanel.CSS}</style>
             <div class="setting-row">
               <div class="setting-info">
                 <div class="setting-label">Maksymalny wiek traces</div>
-                <div class="setting-desc">Ukryj traces starsze ni\u017c wybrany okres (filtrowanie po stronie frontendu, nie usuwa danych z HA)</div>
+                <div class="setting-desc">Ukryj traces starsze niż wybrany okres (filtrowanie po stronie frontendu, nie usuwa danych z HA)</div>
               </div>
               <div class="setting-control">
                 <select class="setting-select" data-setting="trace.maxAge" id="traceMaxAge">
@@ -1473,7 +1699,7 @@ ${HAToolsPanel.CSS}</style>
                 <div class="setting-row">
                   <div class="setting-info">
                     <div class="setting-label">Pokazuj w dashboardzie</div>
-                    <div class="setting-desc">Widoczno\u015b\u0107 karty na stronie g\u0142\u00f3wnej</div>
+                    <div class="setting-desc">Widoczność karty na stronie głównej</div>
                   </div>
                   <div class="setting-control">
                     <label class="setting-toggle">
@@ -1487,8 +1713,8 @@ ${HAToolsPanel.CSS}</style>
                 ${isTraceViewer ? `
                 <div class="setting-row">
                   <div class="setting-info">
-                    <div class="setting-label">Wpis\u00f3w na stron\u0119</div>
-                    <div class="setting-desc">Ile traces/automatyzacji wy\u015bwietla\u0107 na jednej stronie</div>
+                    <div class="setting-label">Wpisów na stronę</div>
+                    <div class="setting-desc">Ile traces/automatyzacji wyświetlać na jednej stronie</div>
                   </div>
                   <div class="setting-control">
                     <select class="setting-select" data-setting="${prefix}.pageSize">
@@ -1564,7 +1790,7 @@ ${HAToolsPanel.CSS}</style>
                 <div class="setting-row">
                   <div class="setting-info">
                     <div class="setting-label">Powiadomienia</div>
-                    <div class="setting-desc">Poka\u017c powiadomienia z tego narz\u0119dzia</div>
+                    <div class="setting-desc">Pokaż powiadomienia z tego narzędzia</div>
                   </div>
                   <div class="setting-control">
                     <label class="setting-toggle">
@@ -1606,7 +1832,7 @@ ${HAToolsPanel.CSS}</style>
       });
     });
 
-    // Trace storage \u2014 Apply button
+    // Trace storage — Apply button
     const applyBtn = content.querySelector('#applyTracesBtn');
     const traceStatus = content.querySelector('#traceStatus');
     const storedTracesSelect = content.querySelector('#storedTracesCount');
@@ -1664,7 +1890,7 @@ ${HAToolsPanel.CSS}</style>
 
   async _applyStoredTraces(count, statusEl) {
     if (!this._hass) {
-      statusEl.textContent = '\u274C Brak po\u0142\u0105czenia z Home Assistant';
+      statusEl.textContent = '\u274C Brak połączenia z Home Assistant';
       statusEl.className = 'status-msg visible error';
       return;
     }
@@ -1695,10 +1921,10 @@ ${HAToolsPanel.CSS}</style>
 
       statusEl.innerHTML = `\u2705 stored_traces: ${count}<br>` +
         `<small>\u{1F4CA} ${automations.length} automatyzacji: ${updated} UI, ${skippedYaml} YAML</small><br>` +
-        `<small style="opacity:0.8">\u{1F4DD} Ustaw <code>stored_traces: ${count}</code> w configuration.yaml pod sekcj\u0105 <code>automation:</code> \u2014 API nie obs\u0142uguje tego pola per-automatyzacja.</small>`;
+        `<small style="opacity:0.8">\u{1F4DD} Ustaw <code>stored_traces: ${count}</code> w configuration.yaml pod sekcją <code>automation:</code> — API nie obsługuje tego pola per-automatyzacja.</small>`;
       statusEl.className = 'status-msg visible success';
     } catch (e) {
-      statusEl.textContent = `\u274C B\u0142\u0105d: ${e.message}`;
+      statusEl.textContent = `\u274C Błąd: ${e.message}`;
       statusEl.className = 'status-msg visible error';
     }
   }
@@ -1719,7 +1945,7 @@ ${HAToolsPanel.CSS}</style>
     if (arCb) arCb.checked = this._getSetting('autoRefresh', false);
 
     const content = this.shadowRoot.getElementById('content');
-    content.innerHTML = `<div class="empty"><div class="big">\u23F3</div><div>\u0141adowanie...</div></div>`;
+    content.innerHTML = `<div class="empty"><div class="big">\u23F3</div><div>Ładowanie...</div></div>`;
 
     setTimeout(() => {
       try {
@@ -1740,7 +1966,7 @@ ${HAToolsPanel.CSS}</style>
         content.appendChild(card);
         this._cardInstance = card;
       } catch (e) {
-        content.innerHTML = `<div class="empty"><div class="big">\u26A0\uFE0F</div><div>B\u0142\u0105d: ${e.message}</div></div>`;
+        content.innerHTML = `<div class="empty"><div class="big">\u26A0\uFE0F</div><div>Błąd: ${e.message}</div></div>`;
       }
     }, 150);
   }
