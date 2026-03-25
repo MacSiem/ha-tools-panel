@@ -79,11 +79,13 @@ class HAStorageMonitor extends HTMLElement {
         backups = backupList?.backups || backupList?.data?.backups || [];
       } catch(e) { console.warn('[Storage] Could not fetch backups:', e); }
 
-      // Recorder info - note: recorder/info does NOT provide db size in current HA versions
+      // Recorder info — current HA recorder/info API does NOT expose db size
+      // Available fields: backlog, db_in_default_location, max_backlog, migration_in_progress, migration_is_live, recording, thread_running
       let dbSize = 0;
+      let recorderMeta = {};
       try {
-        const recorderInfo = await this._hass.callWS({ type: 'recorder/info' });
-        dbSize = recorderInfo?.estimated_db_size_bytes || recorderInfo?.recorder?.estimated_db_size_bytes || 0;
+        recorderMeta = await this._hass.callWS({ type: 'recorder/info' }) || {};
+        // DB size unavailable from this endpoint — UI will show "N/A" when dbSize === 0
       } catch(e) { console.warn('[Storage] No recorder info:', e); }
 
       // API returns numbers directly (in GB), no .data wrapper

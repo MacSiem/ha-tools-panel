@@ -1,4 +1,4 @@
-﻿class HaBackupManager extends HTMLElement {
+class HaBackupManager extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });

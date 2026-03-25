@@ -86,10 +86,10 @@ class HASecurityCheck extends HTMLElement {
 
     try {
       let hostInfo = null, osInfo = null, supervisorInfo = null, coreInfo = null;
-      try { hostInfo = (await this._hass.callWS({ type: 'supervisor/api', endpoint: '/host/info', method: 'get' }))?.data; } catch(e) {}
-      try { osInfo = (await this._hass.callWS({ type: 'supervisor/api', endpoint: '/os/info', method: 'get' }))?.data; } catch(e) {}
-      try { supervisorInfo = (await this._hass.callWS({ type: 'supervisor/api', endpoint: '/supervisor/info', method: 'get' }))?.data; } catch(e) {}
-      try { coreInfo = (await this._hass.callWS({ type: 'supervisor/api', endpoint: '/core/info', method: 'get' }))?.data; } catch(e) {}
+      try { const r = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/host/info', method: 'get' }); hostInfo = r?.data || r; } catch(e) {}
+      try { const r = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/os/info', method: 'get' }); osInfo = r?.data || r; } catch(e) {}
+      try { const r = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/supervisor/info', method: 'get' }); supervisorInfo = r?.data || r; } catch(e) {}
+      try { const r = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/core/info', method: 'get' }); coreInfo = r?.data || r; } catch(e) {}
 
       if (coreInfo) {
         const current = coreInfo.version;
@@ -120,7 +120,7 @@ class HASecurityCheck extends HTMLElement {
       let addons = [];
       try {
         const addonList = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/addons', method: 'get' });
-        addons = addonList?.data?.addons || [];
+        addons = addonList?.addons || addonList?.data?.addons || [];
       } catch(e) {}
 
       const installedAddons = addons.filter(a => a.installed);
@@ -393,8 +393,9 @@ class HASecurityCheck extends HTMLElement {
       // NEW CHECK: Backup encryption
       try {
         const backups = await this._hass.callWS({ type: 'supervisor/api', endpoint: '/backups', method: 'get' });
-        if (backups?.data?.backups && backups.data.backups.length > 0) {
-          const unencryptedBackups = backups.data.backups.filter(b => b.protected === false);
+        const backupList = backups?.backups || backups?.data?.backups || [];
+        if (backupList.length > 0) {
+          const unencryptedBackups = backupList.filter(b => b.protected === false);
           if (unencryptedBackups.length > 0) {
             findings.warning.push({ id: 'unencrypted_backups', title: `${unencryptedBackups.length} backup(s) without encryption`, desc: 'Unencrypted backups expose sensitive data', fix: 'Create new backups with a password. Set a backup password in Settings \u2192 System \u2192 Backups' });
           }
@@ -407,7 +408,7 @@ class HASecurityCheck extends HTMLElement {
         if (mqttAddonRunning) {
           try {
             const mqttConfig = await this._hass.callWS({ type: 'supervisor/api', endpoint: `/addons/${mqttAddonRunning.slug}/options`, method: 'get' });
-            const opts = mqttConfig?.data?.options || {};
+            const opts = mqttConfig?.options || mqttConfig?.data?.options || {};
             if (opts.anonymous === true) {
               findings.critical.push({ id: 'mqtt_anonymous', title: 'MQTT allows anonymous connections', desc: 'Anyone on the network can connect to your MQTT broker without authentication', fix: 'Disable anonymous access in Mosquitto addon configuration and set up proper user credentials' });
             } else {
