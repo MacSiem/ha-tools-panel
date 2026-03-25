@@ -55,28 +55,18 @@ class HASentenceManager extends HTMLElement {
   }
 
   set hass(hass) {
+    const prevHass = this._hass;
     this._hass = hass;
     if (!hass) return;
-    const now = Date.now();
     if (!this._firstHassRender) {
       this._firstHassRender = true;
       this.render();
-      this._lastRenderTime = now;
+      this._lastRenderTime = Date.now();
       return;
     }
-    if (now - (this._lastRenderTime || 0) < 10000) {
-      if (!this._renderScheduled) {
-        this._renderScheduled = true;
-        setTimeout(() => {
-          this._renderScheduled = false;
-          this.render();
-          this._lastRenderTime = Date.now();
-        }, 5000 - (now - (this._lastRenderTime || 0)));
-      }
-      return;
-    }
-    this.render();
-    this._lastRenderTime = now;
+    // Only re-render on hass update if entities actually changed
+    // Sentence Manager has no entity dependencies — skip re-render on hass updates
+    // Re-rendering is handled explicitly by user actions (tab switch, save, etc.)
   }
 
   get hass() {
@@ -505,6 +495,20 @@ class HASentenceManager extends HTMLElement {
       this.shadowRoot.innerHTML = this.getStyles();
     }
 
+    // Build only the active tab content to avoid unnecessary DOM
+    let activeTabContent = '';
+    switch (this.currentTab) {
+      case 'ha-sentences': activeTabContent = this._renderHaSentencesTab(); break;
+      case 'editor': activeTabContent = this.renderEditor(); break;
+      case 'list': activeTabContent = this.renderList(); break;
+      case 'test': activeTabContent = this.renderTest(); break;
+      case 'export': activeTabContent = this.renderExport(); break;
+    }
+
+    const tipDismissed = (() => {
+      try { return localStorage.getItem('sentence-manager-tips-v3.0.0') === 'dismissed'; } catch(e) { return false; }
+    })();
+
     const container = document.createElement('div');
     container.className = 'card';
     container.innerHTML = `
@@ -512,7 +516,7 @@ class HASentenceManager extends HTMLElement {
         <h1 class="card-title">${this.config.title || 'Sentence Manager'}</h1>
       </div>
 
-      <div class="tip-banner" id="tip-banner">
+      <div class="tip-banner ${tipDismissed ? 'hidden' : ''}" id="tip-banner">
         <button class="tip-dismiss" id="tip-dismiss">\u2715</button>
         <div class="tip-banner-title">\u{1F4A1} Jak dzia\u0142aj\u0105 komendy g\u0142osowe?</div>
         <ul>
@@ -534,11 +538,7 @@ class HASentenceManager extends HTMLElement {
       </div>
 
       <div class="tab-content active">
-        ${this._renderHaSentencesTab()}
-        ${this.renderEditor()}
-        ${this.renderList()}
-        ${this.renderTest()}
-        ${this.renderExport()}
+        ${activeTabContent}
       </div>
     `;
 
@@ -563,6 +563,26 @@ class HASentenceManager extends HTMLElement {
       const intents = Object.entries(haData.intents);
       const totalSentences = intents.reduce((sum, [, arr]) => sum + arr.length, 0);
       const lists = haData.lists ? Object.entries(haData.lists) : [];
+      // Group intents by category (guess from name prefix)
+      const categorize = (name) => {
+        const n = name.toLowerCase();
+        if (n.includes('breastfeed') || n.includes('bottle') || n.includes('diaper') || n.includes('pump') || n.includes('baby') || n.includes('sleep')) return '\u{1F476} Dziecko';
+        if (n.includes('light') || n.includes('lamp') || n.includes('brightness')) return '\u{1F4A1} O\u015Bwietlenie';
+        if (n.includes('climate') || n.includes('temp') || n.includes('thermostat') || n.includes('heat')) return '\u{1F321}\uFE0F Klimat';
+        if (n.includes('media') || n.includes('play') || n.includes('music') || n.includes('track')) return '\u{1F3B5} Media';
+        if (n.includes('cover') || n.includes('blind') || n.includes('shutter')) return '\u{1F3E0} Rolety';
+        if (n.includes('lock') || n.includes('alarm') || n.includes('security')) return '\u{1F512} Bezpiecze\u0144stwo';
+        if (n.includes('scene') || n.includes('routine')) return '\u{1F3AD} Sceny';
+        return '\u{1F527} Inne';
+      };
+      const categories = {};
+      for (const [name, sents] of intents) {
+        const cat = categorize(name);
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push([name, sents]);
+      }
+      const categoryEntries = Object.entries(categories);
+
       contentHtml = `
         <div class="ha-sentences-summary">
           <div class="stats-row">
@@ -579,66 +599,109 @@ class HASentenceManager extends HTMLElement {
               <div class="stat-label">List</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">${haData.language || lang}</div>
-              <div class="stat-label">J\u0119zyk</div>
+              <div class="stat-value">${categoryEntries.length}</div>
+              <div class="stat-label">Kategorii</div>
             </div>
           </div>
+          <p style="font-size:11px;color:var(--bento-text-muted);margin-top:8px;">
+            \u2139\uFE0F ${haData._detectedViaAPI ? 'Wykryte przez Conversation API' : `J\u0119zyk: ${haData.language || lang}`}
+            ${haData._sourceFile ? ` \u2022 Plik: ${haData._sourceFile}` : ''}
+          </p>
         </div>
         <div class="ha-sentences-detail">
-          <h3>\u{1F4AC} Intenty i zdania</h3>
-          ${intents.map(([name, sentences]) => `
-            <div class="intent-group">
-              <div class="intent-header">
-                <span class="intent-name">${name}</span>
-                <span class="badge badge-info">${sentences.length} zda\u0144</span>
-              </div>
-              <div class="intent-sentences">
-                ${sentences.map(s => `<div class="ha-sentence-item"><code>${this._escapeHtml(s)}</code></div>`).join('')}
-              </div>
+          ${categoryEntries.map(([cat, catIntents]) => `
+            <div class="category-section" style="margin-bottom:20px;">
+              <h3 class="category-header" style="font-size:15px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bento-border);">${cat}
+                <span style="font-size:11px;color:var(--bento-text-muted);font-weight:400;margin-left:8px;">${catIntents.length} intent${catIntents.length !== 1 ? '\u00F3w' : ''}</span>
+              </h3>
+              ${catIntents.map(([name, sentences]) => `
+                <div class="intent-group">
+                  <div class="intent-header" style="cursor:pointer;" data-toggle-intent="${name}">
+                    <span class="intent-name">${name}</span>
+                    <span class="badge badge-info">${sentences.length} zda\u0144</span>
+                    <span class="toggle-arrow" style="margin-left:auto;font-size:12px;color:var(--bento-text-muted);">\u25BC</span>
+                  </div>
+                  <div class="intent-sentences" data-intent-body="${name}">
+                    ${sentences.map(s => `<div class="ha-sentence-item"><code>${this._escapeHtml(s)}</code></div>`).join('')}
+                  </div>
+                </div>
+              `).join('')}
             </div>
           `).join('')}
           ${lists.length > 0 ? `
-            <h3 style="margin-top:24px;">\u{1F4D6} Listy slot\u00F3w</h3>
-            ${lists.map(([name, values]) => `
-              <div class="intent-group">
-                <div class="intent-header">
-                  <span class="intent-name">{${name}}</span>
-                  <span class="badge badge-info">${values.length} warto\u015Bci</span>
+            <div class="category-section" style="margin-bottom:20px;">
+              <h3 class="category-header" style="font-size:15px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bento-border);">\u{1F4D6} Listy slot\u00F3w
+                <span style="font-size:11px;color:var(--bento-text-muted);font-weight:400;margin-left:8px;">${lists.length} list</span>
+              </h3>
+              ${lists.map(([name, values]) => `
+                <div class="intent-group">
+                  <div class="intent-header">
+                    <span class="intent-name">{${name}}</span>
+                    <span class="badge badge-info">${values.length} warto\u015Bci</span>
+                  </div>
+                  <div class="slot-values">
+                    ${values.map(v => {
+                      if (v.value) return `<span class="slot-badge">${v.value}</span>`;
+                      return `<span class="slot-badge">${v.in} \u2192 ${v.out || ''}</span>`;
+                    }).join(' ')}
+                  </div>
                 </div>
-                <div class="slot-values">
-                  ${values.map(v => {
-                    if (v.value) return `<span class="slot-badge">${v.value}</span>`;
-                    return `<span class="slot-badge">${v.in} \u2192 ${v.out || ''}</span>`;
-                  }).join(' ')}
-                </div>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           ` : ''}
         </div>
-        <div class="ha-sentences-actions" style="margin-top:16px;">
+        <div class="ha-sentences-actions" style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary" id="import-ha-btn">\u{1F4E5} Importuj do edytora</button>
           <button class="btn btn-secondary" id="reload-ha-btn">\u{1F504} Od\u015Bwie\u017C</button>
         </div>
       `;
     } else {
-      // No data loaded yet or file not found — show info + manual load
+      // No data loaded yet or file not found — show structured info + load options
       contentHtml = `
         <div class="ha-sentences-info">
           <div class="info-card">
             <h3>\u{1F4C1} Custom Sentences w Home Assistant</h3>
-            <p>HA przechowuje niestandardowe komendy g\u0142osowe w katalogu <code>config/custom_sentences/${lang}/</code>.</p>
-            <p>Aby wczyta\u0107 zdania z serwera, wklej zawarto\u015B\u0107 pliku YAML poni\u017Cej lub u\u017Cyj przycisku.</p>
-            <div class="file-path-info">
-              <strong>\u{1F4C4} Znana \u015Bcie\u017Cka:</strong> <code>custom_sentences/${lang}/baby.yaml</code>
+            <p>HA automatycznie wczytuje pliki YAML z katalogu <code>config/custom_sentences/${lang}/</code>.</p>
+            <p style="font-size:12px;color:var(--bento-text-secondary);margin-top:4px;">
+              \u2139\uFE0F Nie trzeba nic dodawa\u0107 do <code>configuration.yaml</code> \u2014 HA automatycznie wykrywa pliki w tym katalogu po restarcie.
+            </p>
+            <div class="file-path-info" style="margin-top:12px;">
+              <strong>\u{1F4C4} Struktura katalog\u00F3w:</strong><br>
+              <code style="display:block;margin-top:4px;padding:8px 12px;background:var(--bento-bg);border-radius:var(--bento-radius-xs);font-size:12px;line-height:1.6;">
+                config/<br>
+                \u2514\u2500 custom_sentences/<br>
+                &nbsp;&nbsp;&nbsp;\u2514\u2500 ${lang}/<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\u251C\u2500 baby.yaml<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\u251C\u2500 lights.yaml<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\u2514\u2500 ... (dowolna nazwa)
+              </code>
             </div>
           </div>
-          <div class="manual-load" style="margin-top:16px;">
-            <textarea id="ha-yaml-paste" class="yaml-editor" placeholder="Wklej zawarto\u015B\u0107 pliku custom_sentences/${lang}/*.yaml tutaj..."></textarea>
-            <button class="btn btn-primary" id="parse-ha-yaml-btn" style="margin-top:8px;">\u{1F50D} Parsuj YAML</button>
-          </div>
-          <div class="auto-detect" style="margin-top:16px;">
-            <button class="btn btn-secondary" id="detect-ha-btn">\u{1F50E} Wykryj automatycznie (testuj zdania)</button>
-            <p class="hint" style="font-size:12px; color:var(--bento-text-muted); margin-top:4px;">Przetestuje znane frazy przez Conversation API, aby wykry\u0107 dzia\u0142aj\u0105ce intenty.</p>
+
+          <div class="load-options" style="margin-top:16px;display:grid;gap:12px;">
+            <div class="info-card" style="padding:16px;">
+              <h4 style="margin-bottom:8px;font-size:14px;">\u{1F4CB} Wklej YAML</h4>
+              <p class="hint" style="font-size:12px;color:var(--bento-text-muted);margin-bottom:8px;">Skopiuj zawarto\u015B\u0107 pliku YAML z katalogu custom_sentences i wklej poni\u017Cej.</p>
+              <div style="display:flex;gap:8px;align-items:flex-start;">
+                <select id="ha-file-select" style="min-width:180px;padding:8px;">
+                  <option value="">Nowy plik...</option>
+                  <option value="baby.yaml">baby.yaml</option>
+                  <option value="lights.yaml">lights.yaml</option>
+                  <option value="climate.yaml">climate.yaml</option>
+                  <option value="media.yaml">media.yaml</option>
+                  <option value="custom.yaml">custom.yaml</option>
+                </select>
+                <input type="text" id="ha-new-file-name" placeholder="lub wpisz nazw\u0119 nowego pliku..." style="flex:1;">
+              </div>
+              <textarea id="ha-yaml-paste" class="yaml-editor" style="margin-top:8px;" placeholder="Wklej zawarto\u015B\u0107 pliku custom_sentences/${lang}/*.yaml tutaj..."></textarea>
+              <button class="btn btn-primary" id="parse-ha-yaml-btn" style="margin-top:8px;">\u{1F50D} Parsuj YAML</button>
+            </div>
+
+            <div class="info-card" style="padding:16px;">
+              <h4 style="margin-bottom:8px;font-size:14px;">\u{1F50E} Automatyczne wykrywanie</h4>
+              <p class="hint" style="font-size:12px;color:var(--bento-text-muted);margin-bottom:8px;">Przetestuje znane frazy przez Conversation API, aby wykry\u0107 dzia\u0142aj\u0105ce intenty.</p>
+              <button class="btn btn-secondary" id="detect-ha-btn">\u{1F50E} Wykryj automatycznie</button>
+            </div>
           </div>
         </div>
       `;
@@ -972,8 +1035,14 @@ class HASentenceManager extends HTMLElement {
     this.shadowRoot.querySelector('#detect-ha-btn')?.addEventListener('click', () => this._autoDetectIntents());
     this.shadowRoot.querySelector('#parse-ha-yaml-btn')?.addEventListener('click', () => {
       const yaml = this.shadowRoot.querySelector('#ha-yaml-paste')?.value;
+      const fileSelect = this.shadowRoot.querySelector('#ha-file-select')?.value;
+      const newFileName = this.shadowRoot.querySelector('#ha-new-file-name')?.value?.trim();
+      const sourceFile = newFileName || fileSelect || '';
       if (yaml && yaml.trim()) {
         this._haSentences = this._parseCustomSentencesYaml(yaml);
+        if (this._haSentences) {
+          this._haSentences._sourceFile = sourceFile;
+        }
         if (this._haSentences && Object.keys(this._haSentences.intents).length > 0) {
           this.showNotification('YAML sparsowany pomy\u015Blnie!', 'success');
         } else {
@@ -982,6 +1051,30 @@ class HASentenceManager extends HTMLElement {
         this.render();
       }
     });
+    // Collapsible intent sections
+    this.shadowRoot.querySelectorAll('[data-toggle-intent]').forEach(header => {
+      header.addEventListener('click', () => {
+        const intentName = header.dataset.toggleIntent;
+        const body = this.shadowRoot.querySelector(`[data-intent-body="${intentName}"]`);
+        const arrow = header.querySelector('.toggle-arrow');
+        if (body) {
+          const isHidden = body.style.display === 'none';
+          body.style.display = isHidden ? '' : 'none';
+          if (arrow) arrow.textContent = isHidden ? '\u25BC' : '\u25B6';
+        }
+      });
+    });
+    // File select / new file name toggle
+    const fileSelect = this.shadowRoot.querySelector('#ha-file-select');
+    const newFileInput = this.shadowRoot.querySelector('#ha-new-file-name');
+    if (fileSelect && newFileInput) {
+      fileSelect.addEventListener('change', () => {
+        if (fileSelect.value) newFileInput.value = '';
+      });
+      newFileInput.addEventListener('input', () => {
+        if (newFileInput.value) fileSelect.value = '';
+      });
+    }
 
     // Export/Import
     this.shadowRoot.querySelector('#copy-yaml-btn')?.addEventListener('click', () => {
@@ -1029,9 +1122,9 @@ class HASentenceManager extends HTMLElement {
 
   getStyles() {
     return `
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
       <style>
 /* ===== BENTO LIGHT MODE DESIGN SYSTEM ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :host {
   --bento-primary: #3B82F6;
