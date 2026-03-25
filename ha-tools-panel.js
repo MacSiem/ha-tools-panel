@@ -191,10 +191,12 @@ class HAToolsPanel extends HTMLElement {
         const myChildren = children.filter(c => c.group === t.id);
         const childActive = myChildren.some(c => this._activeToolId === c.id);
         const isCollapsed = this._collapsedGroups.has(t.id) && !childActive;
+        const countBadge = myChildren.length ? `<span class="nav-group-count">${myChildren.length}</span>` : '';
         const chevron = myChildren.length ? `<span class="nav-expand${isCollapsed ? ' collapsed' : ''}">&#9662;</span>` : '';
         html += `<div class="nav-item${isActive || childActive ? ' active' : ''}${myChildren.length ? ' has-children' : ''}" data-tool="${t.id}" data-tag="${t.tag || ''}">
           <span class="nav-icon">${t.icon}</span>
           <span>${t.name}</span>
+          ${countBadge}
           ${chevron}
         </div>`;
         if (myChildren.length) {
@@ -477,12 +479,25 @@ class HAToolsPanel extends HTMLElement {
 }
 .nav-expand {
   margin-left: auto;
-  font-size: 10px;
-  opacity: 0.5;
+  font-size: 16px;
+  opacity: 0.7;
   transition: transform 0.25s ease;
+  cursor: pointer;
+  padding: 2px 4px;
 }
 .nav-expand.collapsed {
   transform: rotate(-90deg);
+}
+.nav-group-count {
+  margin-left: auto;
+  background: var(--bento-border, rgba(0,0,0,0.08));
+  color: var(--bento-text-secondary, #888);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
 }
 .nav-item .nav-badge {
   margin-left: auto;

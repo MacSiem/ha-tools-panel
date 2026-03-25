@@ -8,7 +8,7 @@
  * Config:
  *   type: custom:ha-energy-email
  *   title: Energy Email Reports          (optional)
- *   recipient: maciek.sieminski@gmail.com (optional, shown in UI)
+ *   recipient: your@email.com (optional, shown in UI)
  *   currency: PLN                         (optional, default PLN)
  *   energy_price: 0.65                    (optional PLN/kWh)
  */
@@ -54,7 +54,7 @@ class HAEnergyEmail extends HTMLElement {
   setConfig(config) {
     this._config = {
       title: config.title || 'Energy Email Reports',
-      recipient: config.recipient || 'maciek.sieminski@gmail.com',
+      recipient: config.recipient || '',
       currency: config.currency || 'PLN',
       energy_price: parseFloat(config.energy_price) || 0.65,
       ...config
@@ -66,7 +66,7 @@ class HAEnergyEmail extends HTMLElement {
   static getStubConfig() {
     return {
       title: 'Energy Email Reports',
-      recipient: 'maciek.sieminski@gmail.com',
+      recipient: 'your@email.com',
       currency: 'PLN',
       energy_price: 0.65
     };

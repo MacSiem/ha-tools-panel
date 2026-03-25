@@ -374,8 +374,8 @@ class HAVacuumWaterMonitor extends HTMLElement {
     const status = this._getStatus(data, cfg);
     const gaugeSvg = data.totalMl > 0 ? this._buildGaugeSVG(data.percentRemaining, status.color) : '';
 
-    const remainingText = data.remainingL !== null ? `${data.remainingL.toFixed(2)} L` : '--';
-    const usedText = data.usedMl !== null ? `${(data.usedMl / 1000).toFixed(2)} L` : '--';
+    const remainingText = data.remainingL != null ? `${Number(data.remainingL).toFixed(2)} L` : '--';
+    const usedText = data.usedMl != null ? `${(Number(data.usedMl) / 1000).toFixed(2)} L` : '--';
 
     const vacStateChip = data.vacState
       ? `<span class="chip ${data.isCleaning ? 'chip-active' : 'chip-idle'}">${data.isCleaning ? '\uD83E\uDDF9 Cleaning' : '\uD83D\uDECC Idle'}</span>`
@@ -387,7 +387,7 @@ class HAVacuumWaterMonitor extends HTMLElement {
     }
     if (cfg.show_filter !== false && data.filterDays !== null) {
       const filterColor = data.filterDays < 7 ? '#ef4444' : data.filterDays < 30 ? '#f59e0b' : '#22c55e';
-      extraRows += `<div class="row"><span class="row-label">\uD83D\uDD0D Filter life</span><span class="row-val" style="color:${filterColor}">${data.filterDays.toFixed(0)} days</span></div>`;
+      extraRows += `<div class="row"><span class="row-label">\uD83D\uDD0D Filter life</span><span class="row-val" style="color:${filterColor}">${(data.filterDays || 0).toFixed(0)} days</span></div>`;
     }
     if (data.lastReset) {
       extraRows += `<div class="row"><span class="row-label">\uD83D\uDD04 Last refill</span><span class="row-val">${this._formatReset(data.lastReset)}</span></div>`;
@@ -530,7 +530,7 @@ class HAVacuumWaterMonitor extends HTMLElement {
     if (data.isCleaning && data.areaCleaned) {
       currentSession = `<div class="current-session-card">
         <div class="cs-title">\uD83D\uDD04 Current session</div>
-        <div class="cs-row"><span>\uD83D\uDDFA\uFE0F Area cleaned</span><span>${parseFloat(data.areaCleaned).toFixed(1)} m\u00B2</span></div>
+        <div class="cs-row"><span>\uD83D\uDDFA\uFE0F Area cleaned</span><span>${data.areaCleaned != null ? parseFloat(data.areaCleaned).toFixed(1) : '--'} m\u00B2</span></div>
         ${data.sessionMl ? `<div class="cs-row"><span>\uD83D\uDCA7 Water used</span><span>${data.sessionMl} ml</span></div>` : ''}
         ${data.durationSec ? `<div class="cs-row"><span>\u23F1\uFE0F Duration</span><span>${this._formatDuration(data.durationSec)}</span></div>` : ''}
       </div>`;
@@ -545,7 +545,7 @@ class HAVacuumWaterMonitor extends HTMLElement {
       lastSessionHtml = `<div class="session-row">
         <div class="session-date">${label} <span class="session-time">${endDate.getHours()}:${String(endDate.getMinutes()).padStart(2,'0')}</span></div>
         <div class="session-stats">
-          ${data.areaCleaned ? `<span class="session-stat">\uD83D\uDDFA\uFE0F ${parseFloat(data.areaCleaned).toFixed(0)} m\u00B2</span>` : ''}
+          ${data.areaCleaned ? `<span class="session-stat">\uD83D\uDDFA\uFE0F ${data.areaCleaned != null ? parseFloat(data.areaCleaned).toFixed(0) : '--'} m\u00B2</span>` : ''}
           ${data.durationSec ? `<span class="session-stat">\u23F1\uFE0F ${this._formatDuration(data.durationSec)}</span>` : ''}
         </div>
       </div>`;
@@ -661,8 +661,8 @@ class HAVacuumWaterMonitor extends HTMLElement {
       <div class="section-title">\uD83D\uDCC5 This Week (logged)</div>
       <div class="stats-grid">
         <div class="stat-box"><div class="stat-num">${totalSessions}</div><div class="stat-label">sessions</div></div>
-        <div class="stat-box"><div class="stat-num">${totalArea.toFixed(0)}</div><div class="stat-label">m\u00B2 cleaned</div></div>
-        <div class="stat-box"><div class="stat-num">${(totalWater / 1000).toFixed(1)}</div><div class="stat-label">L water</div></div>
+        <div class="stat-box"><div class="stat-num">${(totalArea || 0).toFixed(0)}</div><div class="stat-label">m\u00B2 cleaned</div></div>
+        <div class="stat-box"><div class="stat-num">${((totalWater || 0) / 1000).toFixed(1)}</div><div class="stat-label">L water</div></div>
       </div>
     </div>`;
   }
@@ -679,6 +679,7 @@ class HAVacuumWaterMonitor extends HTMLElement {
   // ── MAIN RENDER ───────────────────────────────────────────────────────────
 
   _render() {
+   try {
     const devices = this._getDevices();
     const device = devices[this._activeDeviceIdx] || devices[0] || {};
     const data = Object.keys(device).length ? this._calcDeviceData(device) : {};
@@ -803,9 +804,43 @@ class HAVacuumWaterMonitor extends HTMLElement {
         .battery-pct { font-weight: 700; font-size: 12px; width: 35px; text-align: right; }
         /* Empty */
         .empty-state { text-align: center; color: rgba(255,255,255,0.3); padding: 20px; font-size: 13px; line-height: 1.5; }
+
+/* Tips banner */
+.tip-banner {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+  border: 1.5px solid rgba(59,130,246,0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  position: relative;
+}
+.tip-banner-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #3B82F6; }
+.tip-banner ul { margin: 6px 0 0 16px; padding: 0; }
+.tip-banner li { margin-bottom: 3px; }
+.tip-banner .tip-dismiss {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: var(--secondary-text-color, #888); opacity: 0.6;
+}
+.tip-banner .tip-dismiss:hover { opacity: 1; }
+.tip-banner.hidden { display: none; }
+
       </style>
       <div class="card">
         <div class="card-title">${this._config.title}</div>
+        <div class="tip-banner" id="tip-banner">
+          <button class="tip-dismiss" id="tip-dismiss">\u2715</button>
+          <div class="tip-banner-title">\u{1F4A1} Konfiguracja</div>
+          <ul>
+            <li><strong>Brand Profile</strong> \u2014 wybierz profil (Roborock, Dreame, iRobot, Ecovacs) aby automatycznie wype\u0142ni\u0107 nazwy sensor\u00F3w.</li>
+            <li><strong>Wymagane encje:</strong> vacuum.*, sensor/binary_sensor dla wody, input_number do \u015Bledzenia zu\u017Cycia.</li>
+            <li><strong>Multi-device</strong> \u2014 dodaj wiele odkurzaczy w config (tablica <code>devices</code>).</li>
+            <li><strong>Zak\u0142adki:</strong> Water (poziom wody), Consumables (szczotki, filtry), Stats (statystyki sprz\u0105tania), History (historia sesji).</li>
+            <li><strong>Refill</strong> \u2014 resetuje licznik zu\u017Cycia wody po uzupe\u0142nieniu zbiornika.</li>
+          </ul>
+        </div>
         ${deviceTabsHtml}
         ${deviceHeader}
         ${tabNav}
@@ -813,10 +848,60 @@ class HAVacuumWaterMonitor extends HTMLElement {
       </div>`;
 
     this._attachListeners(devices, device);
+   } catch(err) {
+    // Show error with tip banner
+    this.shadowRoot.innerHTML = `
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        :host { display: block; font-family: 'Inter', sans-serif; color: var(--primary-text-color, #1a1a2e); }
+        .err-container { max-width: 700px; margin: 30px auto; padding: 20px; }
+        .err-card { background: rgba(239,68,68,0.05); border: 1.5px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .err-icon { font-size: 48px; margin-bottom: 10px; }
+        .err-msg { font-size: 13px; color: #888; margin-top: 8px; font-family: monospace; }
+        .tip-banner { background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03)); border: 1.5px solid rgba(59,130,246,0.2); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.6; }
+        .tip-banner-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #3B82F6; }
+        .tip-banner ul { margin: 6px 0 0 16px; padding: 0; }
+        .tip-banner li { margin-bottom: 3px; }
+      </style>
+      <div class="err-container">
+        <div class="err-card">
+          <div class="err-icon">\u26A0\uFE0F</div>
+          <div><strong>B\u0142\u0105d:</strong> ${err.message}</div>
+          <div class="err-msg">Brakuj\u0105ce encje lub sensory nie s\u0105 dost\u0119pne.</div>
+        </div>
+        <div class="tip-banner">
+          <div class="tip-banner-title">\u{1F4A1} Konfiguracja</div>
+          <ul>
+            <li><strong>Brand Profile</strong> \u2014 wybierz profil (Roborock, Dreame, iRobot, Ecovacs) aby automatycznie wype\u0142ni\u0107 nazwy sensor\u00F3w.</li>
+            <li><strong>Wymagane encje:</strong> vacuum.*, sensor/binary_sensor dla wody, input_number do \u015Bledzenia zu\u017Cycia.</li>
+            <li><strong>Multi-device</strong> \u2014 dodaj wiele odkurzaczy w config (tablica <code>devices</code>).</li>
+            <li><strong>Zak\u0142adki:</strong> Water (poziom wody), Consumables (szczotki, filtry), Stats (statystyki sprz\u0105tania), History (historia sesji).</li>
+            <li><strong>Refill</strong> \u2014 resetuje licznik zu\u017Cycia wody po uzupe\u0142nieniu zbiornika.</li>
+          </ul>
+        </div>
+      </div>`;
+    console.warn('[VacuumWaterMonitor] Render error:', err);
+   }
   }
 
   _attachListeners(devices, device) {
     const sr = this.shadowRoot;
+    // Tip banner dismiss
+    const _tipB = this.shadowRoot.querySelector('#tip-banner');
+    if (_tipB) {
+      const _tipV = 'vacuum-water-monitor-tips-v3.0.0';
+      if (localStorage.getItem(_tipV) === 'dismissed') {
+        _tipB.classList.add('hidden');
+      }
+      const _tipDismiss = this.shadowRoot.querySelector('#tip-dismiss');
+      if (_tipDismiss) {
+        _tipDismiss.addEventListener('click', (e) => {
+          e.stopPropagation();
+          _tipB.classList.add('hidden');
+          localStorage.setItem(_tipV, 'dismissed');
+        });
+      }
+    }
 
     // Refill button
     sr.querySelectorAll('.refill-btn').forEach(btn => {

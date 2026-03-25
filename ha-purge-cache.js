@@ -449,11 +449,45 @@ class HAPurgeCache extends HTMLElement {
           .btn-sm { background: #1e1e2e; }
           .key-row:hover { background: rgba(255,255,255,0.04); }
         }
+        /* Tips banner */
+        .tip-banner {
+          background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+          border: 1.5px solid rgba(59,130,246,0.2);
+          border-radius: var(--pc-radius);
+          padding: 14px 16px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          line-height: 1.6;
+          position: relative;
+        }
+        .tip-banner-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--pc-primary); }
+        .tip-banner ul { margin: 6px 0 0 16px; padding: 0; }
+        .tip-banner li { margin-bottom: 3px; }
+        .tip-banner .tip-dismiss {
+          position: absolute; top: 8px; right: 10px;
+          background: none; border: none; cursor: pointer;
+          font-size: 16px; color: var(--pc-text-sec); opacity: 0.6;
+        }
+        .tip-banner .tip-dismiss:hover { opacity: 1; }
+        .tip-banner.hidden { display: none; }
       </style>
 
       <div class="container">
         <h2>\u{1F9F9} Purge Cache <span class="ha-ver">HA <span id="ha-version">...</span></span></h2>
         <div class="subtitle">Wyczy\u015B\u0107 cache przegl\u0105darki, Service Workers, localStorage i skrypty narz\u0119dzi.</div>
+
+        <div class="tip-banner" id="tip-banner">
+          <button class="tip-dismiss" id="tip-dismiss">\u2715</button>
+          <div class="tip-banner-title">\u{1F4A1} Jak korzysta\u0107?</div>
+          <ul>
+            <li><strong>localStorage</strong> \u2014 ustawienia panelu, HACS, frontend HA. Po czyszczeniu trzeba si\u0119 ponownie zalogowa\u0107.</li>
+            <li><strong>sessionStorage</strong> \u2014 dane bie\u017C\u0105cej sesji. Bezpieczne do czyszczenia.</li>
+            <li><strong>Service Workers</strong> \u2014 cache'uj\u0105 zasoby offline. Wyrejestrowanie wymusza pobieranie \u015Bwie\u017Cych plik\u00F3w.</li>
+            <li><strong>Cache Storage</strong> \u2014 API cache przegl\u0105darki. Usuni\u0119cie zwalnia miejsce.</li>
+            <li><strong>Prze\u0142aduj skrypty</strong> \u2014 wymusza ponowne pobranie wszystkich .js narz\u0119dzi z serwera.</li>
+            <li><strong>\u26A0\uFE0F Wyczy\u015B\u0107 WSZYSTKO</strong> \u2014 uruchamia wszystkie powy\u017Csze + hard reload. U\u017Cyj je\u015Bli narz\u0119dzia nie \u0142aduj\u0105 si\u0119 prawid\u0142owo.</li>
+          </ul>
+        </div>
 
         <div class="stats-grid">
           <div class="stat-card">
@@ -547,13 +581,29 @@ class HAPurgeCache extends HTMLElement {
       </div>
     `;
 
-    // Bind events
-    this.shadowRoot.querySelector('#btn-purge-ls').addEventListener('click', () => this._purgeLocalStorage());
+    // Tip banner dismiss
+    const tipBanner = this.shadowRoot.querySelector('#tip-banner');
+    const tipVersion = 'purge-cache-tips-v1.0.0';
+    if (localStorage.getItem(tipVersion) === 'dismissed') {
+      tipBanner.classList.add('hidden');
+    }
+    this.shadowRoot.querySelector('#tip-dismiss').addEventListener('click', (e) => {
+      e.stopPropagation();
+      tipBanner.classList.add('hidden');
+      localStorage.setItem(tipVersion, 'dismissed');
+    });
+
+    // Bind events (with confirmation for destructive actions)
+    this.shadowRoot.querySelector('#btn-purge-ls').addEventListener('click', () => {
+      if (confirm('Wyczy\u015Bci\u0107 localStorage? Ustawienia panelu i logowanie zostan\u0105 zresetowane.')) this._purgeLocalStorage();
+    });
     this.shadowRoot.querySelector('#btn-purge-ss').addEventListener('click', () => this._purgeSessionStorage());
     this.shadowRoot.querySelector('#btn-purge-sw').addEventListener('click', () => this._purgeServiceWorkers());
     this.shadowRoot.querySelector('#btn-purge-cs').addEventListener('click', () => this._purgeCacheStorage());
     this.shadowRoot.querySelector('#btn-reload-tools').addEventListener('click', () => this._forceReloadTools());
-    this.shadowRoot.querySelector('#btn-purge-all').addEventListener('click', () => this._purgeAll());
+    this.shadowRoot.querySelector('#btn-purge-all').addEventListener('click', () => {
+      if (confirm('Wyczy\u015Bci\u0107 WSZYSTKO? Obejmuje localStorage, sessionStorage, Service Workers, Cache Storage i prze\u0142adowanie skrypt\u00F3w.')) this._purgeAll();
+    });
     this.shadowRoot.querySelector('#btn-hard-reload').addEventListener('click', () => this._hardReload());
 
     // Toggle LS keys

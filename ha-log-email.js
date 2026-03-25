@@ -32,7 +32,7 @@ class HALogEmail extends HTMLElement {
   setConfig(config) {
     this._config = {
       title: config.title || 'Log Email Summary',
-      email_recipient: config.email_recipient || 'maciek.sieminski@gmail.com',
+      email_recipient: config.email_recipient || '',
       show_errors: config.show_errors !== false,
       show_warnings: config.show_warnings !== false,
       max_entries: config.max_entries || 50,
@@ -46,7 +46,7 @@ class HALogEmail extends HTMLElement {
     return {
       type: 'custom:ha-log-email',
       title: 'Log Email Summary',
-      email_recipient: 'maciek.sieminski@gmail.com'
+      email_recipient: 'your@email.com'
     };
   }
 

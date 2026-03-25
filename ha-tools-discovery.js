@@ -15,7 +15,7 @@
 
   // === Tool Registry ===
   const HA_TOOLS_REGISTRY = [
-    { id: 'trace-viewer',        name: 'Trace Viewer',        icon: '\u{1F9EC}', tag: 'ha-trace-viewer',        repo: 'MacSiem/ha-trace-viewer',        category: 'debug',   desc: 'Analizuj \u015blady automatyzacji' },
+    { id: 'trace-viewer',        name: 'Trace Viewer',        icon: '\u{1F9EC}', tag: 'ha-trace-viewer',        repo: 'MacSiem/ha-tools-panel',        category: 'debug',   desc: 'Analizuj \u015blady automatyzacji' },
     { id: 'device-health',       name: 'Device Health',       icon: '\u{1F3E5}', tag: 'ha-device-health',       repo: 'MacSiem/ha-device-health',       category: 'monitor', desc: 'Monitoruj stan urz\u0105dze\u0144 i baterii' },
     { id: 'automation-analyzer', name: 'Automation Analyzer', icon: '\u{1F4CA}', tag: 'ha-automation-analyzer', repo: 'MacSiem/ha-automation-analyzer', category: 'debug',   desc: 'Analizuj problemy automatyzacji' },
     { id: 'backup-manager',      name: 'Backup Manager',      icon: '\u{1F4BE}', tag: 'ha-backup-manager',      repo: 'MacSiem/ha-backup-manager',      category: 'system',  desc: 'Zarz\u0105dzaj kopiami zapasowymi' },

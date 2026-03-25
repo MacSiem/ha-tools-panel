@@ -334,6 +334,19 @@ class HASentenceManager extends HTMLElement {
         <h1 class="card-title">${this.config.title || 'Sentence Manager'}</h1>
       </div>
 
+      <div class="tip-banner" id="tip-banner">
+        <button class="tip-dismiss" id="tip-dismiss">\u2715</button>
+        <div class="tip-banner-title">\u{1F4A1} Jak dzia\u0142aj\u0105 komendy g\u0142osowe?</div>
+        <ul>
+          <li><strong>Editor</strong> \u2014 tworzysz zdania (sentences), kt\u00F3re HA rozpoznaje jako komendy g\u0142osowe.</li>
+          <li><strong>Sk\u0142adnia:</strong> u\u017Cyj <code>[opcja1|opcja2]</code> dla alternatyw, <code>{slot_name}</code> dla zmiennych.</li>
+          <li><strong>Intent</strong> \u2014 nazwa akcji (np. TurnOnLight). HA mapuje intent na automatyzacj\u0119.</li>
+          <li><strong>Test</strong> \u2014 testuj zdania w zak\u0142adce Test \u2014 wy\u015Ble tekst do Conversation API.</li>
+          <li><strong>Import/Export</strong> \u2014 eksportuj do YAML, importuj z pliku.</li>
+          <li><strong>Przyk\u0142ad:</strong> <code>[w\u0142\u0105cz|zapal] [\u015Bwiat\u0142o|lamp\u0119] w {room}</code></li>
+        </ul>
+      </div>
+
       <div class="tabs">
         <button class="tab-button ${this.currentTab === 'editor' ? 'active' : ''}" data-tab="editor">Editor</button>
         <button class="tab-button ${this.currentTab === 'list' ? 'active' : ''}" data-tab="list">Sentences</button>
@@ -486,6 +499,22 @@ class HASentenceManager extends HTMLElement {
   }
 
   attachEventListeners() {
+    // Tip banner dismiss
+    const _tipB = this.shadowRoot.querySelector('#tip-banner');
+    if (_tipB) {
+      const _tipV = 'sentence-manager-tips-v3.0.0';
+      if (localStorage.getItem(_tipV) === 'dismissed') {
+        _tipB.classList.add('hidden');
+      }
+      const _tipDismiss = this.shadowRoot.querySelector('#tip-dismiss');
+      if (_tipDismiss) {
+        _tipDismiss.addEventListener('click', (e) => {
+          e.stopPropagation();
+          _tipB.classList.add('hidden');
+          localStorage.setItem(_tipV, 'dismissed');
+        });
+      }
+    }
     // Tab switching
     this.shadowRoot.querySelectorAll('.tab-button').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -1508,6 +1537,28 @@ canvas, .canvas-container canvas { width: 100%; height: 200px; border: 1px solid
   .column { min-width: unset; }
 }
 
+
+/* Tips banner */
+.tip-banner {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+  border: 1.5px solid rgba(59,130,246,0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  position: relative;
+}
+.tip-banner-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #3B82F6; }
+.tip-banner ul { margin: 6px 0 0 16px; padding: 0; }
+.tip-banner li { margin-bottom: 3px; }
+.tip-banner .tip-dismiss {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: var(--secondary-text-color, #888); opacity: 0.6;
+}
+.tip-banner .tip-dismiss:hover { opacity: 1; }
+.tip-banner.hidden { display: none; }
 </style>
     `;
   }

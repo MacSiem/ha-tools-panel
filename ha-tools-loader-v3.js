@@ -3,7 +3,7 @@
  * Loads ha-tools-panel.js with cache-bust timestamp.
  */
 (function() {
-  const BASE = '/local/community/ha-trace-viewer/ha-tools-panel.js';
+  const BASE = '/local/community/ha-tools-panel/ha-tools-panel.js';
   const script = document.createElement('script');
   script.type = 'text/javascript';
   script.src = BASE + '?_=' + Date.now();
