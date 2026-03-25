@@ -25,6 +25,10 @@ class HAAutomationAnalyzer extends HTMLElement {
     this._loadingInProgress = false;
     this._traceNoticeDismissed = false;
     this._loadingPhase = "";
+    this._filterText = "";
+    this._sortBy = "lastTriggered";
+    this._sortDir = "desc";
+    this._timeRange = "all";
   }
 
   setConfig(config) {
@@ -894,10 +898,69 @@ class HAAutomationAnalyzer extends HTMLElement {
         padding: 0 4px; line-height: 1; flex-shrink: 0;
       }
       .trace-notice-dismiss:hover { color: var(--aa-text); }
+      .trace-notice-global {
+        display: flex; align-items: flex-start; gap: var(--aa-space-3);
+        padding: var(--aa-space-3) var(--aa-space-4);
+        background: color-mix(in srgb, var(--aa-info) 8%, var(--aa-card));
+        border: 1px solid color-mix(in srgb, var(--aa-info) 25%, var(--aa-border));
+        border-radius: var(--aa-radius); margin-bottom: var(--aa-space-4);
+        font-size: 12px; color: var(--aa-text); line-height: 1.5;
+      }
+      .trace-notice-global .trace-notice-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+      .trace-notice-global a { color: var(--aa-primary); text-decoration: underline; cursor: pointer; font-weight: 500; }
+      .trace-notice-global a:hover { opacity: 0.8; }
+      .trace-notice-global .detail { color: var(--aa-text2); font-size: 11px; margin-top: 2px; }
+      .filter-bar {
+        display: flex; flex-wrap: wrap; gap: var(--aa-space-2);
+        margin-bottom: var(--aa-space-4); align-items: center;
+      }
+      .filter-bar input[type="text"] {
+        flex: 1; min-width: 160px; padding: 7px 12px;
+        border: 1px solid var(--aa-border); border-radius: var(--aa-radius);
+        background: var(--aa-card); color: var(--aa-text);
+        font-size: 13px; font-family: var(--aa-font);
+        outline: none; transition: border-color var(--aa-anim);
+      }
+      .filter-bar input[type="text"]:focus { border-color: var(--aa-primary); }
+      .filter-bar input[type="text"]::placeholder { color: var(--aa-text2); }
+      .filter-bar select {
+        padding: 7px 28px 7px 10px; border: 1px solid var(--aa-border);
+        border-radius: var(--aa-radius); background: var(--aa-card); color: var(--aa-text);
+        font-size: 12px; font-family: var(--aa-font); cursor: pointer;
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 8px center;
+      }
+      .filter-bar select:focus { border-color: var(--aa-primary); outline: none; }
+      .filter-bar .sort-dir-btn {
+        padding: 6px 8px; border: 1px solid var(--aa-border); border-radius: var(--aa-radius);
+        background: var(--aa-card); color: var(--aa-text2); cursor: pointer;
+        font-size: 14px; line-height: 1; transition: all var(--aa-anim);
+      }
+      .filter-bar .sort-dir-btn:hover { border-color: var(--aa-primary); color: var(--aa-primary); }
+      .auto-list-full { display: flex; flex-direction: column; gap: 4px; max-height: 460px; overflow-y: auto; }
+      .auto-list-full::-webkit-scrollbar { width: 4px; }
+      .auto-list-full::-webkit-scrollbar-thumb { background: var(--aa-border); border-radius: 4px; }
+      .auto-item-full {
+        display: flex; align-items: center; gap: var(--aa-space-2);
+        padding: 8px var(--aa-space-3);
+        background: var(--aa-card); border: 1px solid var(--aa-border);
+        border-radius: var(--aa-radius); cursor: pointer;
+        transition: all var(--aa-anim); font-size: 13px;
+      }
+      .auto-item-full:hover {
+        border-color: var(--aa-primary);
+        background: color-mix(in srgb, var(--aa-primary) 4%, var(--aa-card));
+      }
+      .auto-item-full .auto-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--aa-text); }
+      .auto-item-full .auto-detail { font-size: 11px; color: var(--aa-text2); white-space: nowrap; min-width: 50px; text-align: right; }
+      .auto-item-full .auto-state-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+      .auto-item-full .auto-state-dot.on { background: var(--aa-success); }
+      .auto-item-full .auto-state-dot.off { background: var(--aa-text2); opacity: 0.4; }
+      .auto-item-full .auto-state-dot.error { background: var(--aa-danger); }
+      .filter-results-count { font-size: 11px; color: var(--aa-text2); padding: 2px 0; }
     `;
 
-    const topAutos = this.getTopAutomations(5);
-    const recentAutos = this.getRecentlyTriggered(5);
     const totalActive = Array.from(this.automationStats.values()).filter(a => a.state === "on").length;
     const stats = {
       total: this.automationStats.size,
@@ -913,14 +976,59 @@ class HAAutomationAnalyzer extends HTMLElement {
     const healthText = healthScore >= 75 ? "Doskona\u0142y" : healthScore >= 50 ? "Dobry" : "Wymaga poprawy";
 
     // --- OVERVIEW TAB ---
-    const recentItems = recentAutos.length > 0
-      ? recentAutos.map(a => `
-          <div class="auto-item" data-automation-id="${a.automationId}">
+    // --- Filter and sort the full automation list ---
+    const allAutos = Array.from(this.automationStats.values());
+    let filteredAutos = allAutos;
+
+    // Text filter
+    if (this._filterText) {
+      const q = this._filterText.toLowerCase();
+      filteredAutos = filteredAutos.filter(a => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q) || (a.primaryTrigger && a.primaryTrigger.toLowerCase().includes(q)));
+    }
+
+    // Time range filter
+    if (this._timeRange !== "all") {
+      const days = parseInt(this._timeRange, 10);
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      filteredAutos = filteredAutos.filter(a => a.lastTriggered && a.lastTriggered.getTime() >= cutoff);
+    }
+
+    // Sort
+    const sortDir = this._sortDir === "asc" ? 1 : -1;
+    filteredAutos.sort((a, b) => {
+      switch (this._sortBy) {
+        case "name": return sortDir * a.name.localeCompare(b.name, "pl");
+        case "lastTriggered": {
+          const at = a.lastTriggered ? a.lastTriggered.getTime() : 0;
+          const bt = b.lastTriggered ? b.lastTriggered.getTime() : 0;
+          return sortDir * (at - bt);
+        }
+        case "todayCount": return sortDir * ((a.todayCount || 0) - (b.todayCount || 0));
+        case "avgTime": {
+          const at = typeof a.avgExecutionTime === "number" ? a.avgExecutionTime : 99999;
+          const bt = typeof b.avgExecutionTime === "number" ? b.avgExecutionTime : 99999;
+          return sortDir * (at - bt);
+        }
+        case "state": return sortDir * a.state.localeCompare(b.state);
+        default: return 0;
+      }
+    });
+
+    const filteredListHtml = filteredAutos.length > 0
+      ? filteredAutos.map(a => {
+          const stateClass = a.isFailed ? "error" : a.state === "on" ? "on" : "off";
+          const timeStr = this._formatTimeSince(a.lastTriggered);
+          const execStr = typeof a.avgExecutionTime === "number" ? `${a.avgExecutionTime}ms` : "";
+          const countStr = a.todayCount > 0 ? `${a.todayCount}\u00d7` : "";
+          return `<div class="auto-item-full" data-automation-id="${a.automationId}">
+            <span class="auto-state-dot ${stateClass}"></span>
             <span class="auto-name" title="${a.name}">${a.name}</span>
-            <span class="auto-meta">${this._formatTimeSince(a.lastTriggered)}</span>
-            <span class="auto-arrow">\u203A</span>
-          </div>`).join("")
-      : `<div class="empty-state">Brak ostatnich uruchomie\u0144</div>`;
+            ${countStr ? `<span class="auto-detail" title="Dzisiejsze uruchomienia">${countStr}</span>` : ""}
+            ${execStr ? `<span class="auto-detail" title="\u015Aredni czas">${execStr}</span>` : ""}
+            <span class="auto-detail">${timeStr}</span>
+          </div>`;
+        }).join("")
+      : `<div class="empty-state">Brak automatyzacji pasuj\u0105cych do filtr\u00f3w</div>`;
 
     const overviewContent = `
       <div class="health-row">
@@ -949,8 +1057,27 @@ class HAAutomationAnalyzer extends HTMLElement {
         </div>
       </div>
       <div class="card" style="margin-top:var(--aa-space-4)">
-        <h2 class="card-title">Ostatnio uruchomione</h2>
-        <div class="auto-list">${recentItems}</div>
+        <h2 class="card-title">Automatyzacje</h2>
+        <div class="filter-bar">
+          <input type="text" id="aa-filter-input" placeholder="Szukaj automatyzacji\u2026" value="${this._filterText.replace(/"/g, "&quot;")}">
+          <select id="aa-sort-select">
+            <option value="lastTriggered" ${this._sortBy === "lastTriggered" ? "selected" : ""}>Ostatnie uruchomienie</option>
+            <option value="name" ${this._sortBy === "name" ? "selected" : ""}>Nazwa</option>
+            <option value="todayCount" ${this._sortBy === "todayCount" ? "selected" : ""}>Uruchomienia dzi\u015B</option>
+            <option value="avgTime" ${this._sortBy === "avgTime" ? "selected" : ""}>Czas wykonania</option>
+            <option value="state" ${this._sortBy === "state" ? "selected" : ""}>Stan</option>
+          </select>
+          <button class="sort-dir-btn" id="aa-sort-dir" title="${this._sortDir === "desc" ? "Malej\u0105co" : "Rosn\u0105co"}">${this._sortDir === "desc" ? "\u2193" : "\u2191"}</button>
+          <select id="aa-time-range">
+            <option value="all" ${this._timeRange === "all" ? "selected" : ""}>Ca\u0142y czas</option>
+            <option value="1" ${this._timeRange === "1" ? "selected" : ""}>Dzi\u015B</option>
+            <option value="7" ${this._timeRange === "7" ? "selected" : ""}>7 dni</option>
+            <option value="14" ${this._timeRange === "14" ? "selected" : ""}>14 dni</option>
+            <option value="30" ${this._timeRange === "30" ? "selected" : ""}>30 dni</option>
+          </select>
+        </div>
+        <div class="filter-results-count">${filteredAutos.length} z ${allAutos.length} automatyzacji</div>
+        <div class="auto-list-full">${filteredListHtml}</div>
       </div>
       <div class="card">
         <h2 class="card-title">Najaktywniejsze dzi\u015B</h2>
@@ -964,16 +1091,7 @@ class HAAutomationAnalyzer extends HTMLElement {
     const hasExecData = this.executionTimes.length > 0;
     const hasTriggerData = this.triggerTypes.size > 0;
 
-    const traceNoticeHtml = !this._traceNoticeDismissed ? `
-      <div class="trace-notice" id="trace-storage-notice">
-        <span class="trace-notice-icon">\u{1f4a1}</span>
-        <div>
-          Domy\u015blnie HA przechowuje tylko 5 ostatnich tras na automatyzacj\u0119.
-          Mo\u017cesz zwi\u0119kszy\u0107 limit w <a id="trace-viewer-link">Trace Viewer</a> (HA Tools).
-        </div>
-        <button class="trace-notice-dismiss" id="dismiss-trace-notice" title="Zamknij">\u00d7</button>
-      </div>
-    ` : "";
+    const traceNoticeHtml = "";
 
     const performanceContent = `
       ${traceNoticeHtml}
@@ -1127,6 +1245,18 @@ class HAAutomationAnalyzer extends HTMLElement {
             </p>
           </div>
         </div>
+        ${!this._traceNoticeDismissed ? `
+        <div class="trace-notice-global" id="trace-storage-notice">
+          <span class="trace-notice-icon">\u{1f4a1}</span>
+          <div>
+            Domy\u015blnie HA przechowuje tylko <strong>5 ostatnich tras</strong> na automatyzacj\u0119.
+            Trasy s\u0105 <strong>czyszczone po restarcie</strong> HA \u2014 po ponownym uruchomieniu wszystkie zapisane trace zostan\u0105 usuni\u0119te.
+            Mo\u017cesz zwi\u0119kszy\u0107 limit w <a id="trace-viewer-link">Trace Viewer</a> (HA Tools \u2192 Ustawienia).
+            <div class="detail">\u2139\uFE0F Aby zachowa\u0107 wi\u0119cej danych o wykonaniach, ustaw stored_traces w konfiguracji HA lub u\u017cyj sekcji ustawie\u0144 w Trace Viewer.</div>
+          </div>
+          <button class="trace-notice-dismiss" id="dismiss-trace-notice" title="Zamknij">\u00d7</button>
+        </div>
+        ` : ""}
         <div class="tabs">
           <button class="tab-button ${this.currentTab === "overview" ? "active" : ""}" data-tab="overview">Przegl\u0105d</button>
           <button class="tab-button ${this.currentTab === "performance" ? "active" : ""}" data-tab="performance">Wydajno\u015B\u0107</button>
@@ -1202,6 +1332,44 @@ class HAAutomationAnalyzer extends HTMLElement {
       });
     }
 
+    // Filter, sort, time range controls
+    const filterInput = this.shadowRoot.getElementById("aa-filter-input");
+    if (filterInput) {
+      filterInput.addEventListener("input", (e) => {
+        this._filterText = e.target.value;
+        this._rerenderContent();
+      });
+    }
+    const sortSelect = this.shadowRoot.getElementById("aa-sort-select");
+    if (sortSelect) {
+      sortSelect.addEventListener("change", (e) => {
+        this._sortBy = e.target.value;
+        this._rerenderContent();
+      });
+    }
+    const sortDirBtn = this.shadowRoot.getElementById("aa-sort-dir");
+    if (sortDirBtn) {
+      sortDirBtn.addEventListener("click", () => {
+        this._sortDir = this._sortDir === "desc" ? "asc" : "desc";
+        this._rerenderContent();
+      });
+    }
+    const timeRange = this.shadowRoot.getElementById("aa-time-range");
+    if (timeRange) {
+      timeRange.addEventListener("change", (e) => {
+        this._timeRange = e.target.value;
+        this._rerenderContent();
+      });
+    }
+
+    // Click handlers for full automation list items
+    this.shadowRoot.querySelectorAll(".auto-item-full").forEach(item => {
+      item.addEventListener("click", () => {
+        const automationId = item.dataset.automationId;
+        if (automationId) this._navigateToAutomation(automationId);
+      });
+    });
+
     // Toggle buttons for disabled automations
     this.shadowRoot.querySelectorAll(".toggle-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
@@ -1211,6 +1379,20 @@ class HAAutomationAnalyzer extends HTMLElement {
         if (entityId) this._toggleAutomation(entityId, action === "enable");
       });
     });
+  }
+
+  _rerenderContent() {
+    // Re-render without losing focus on filter input
+    const hadFocus = this.shadowRoot.activeElement?.id === "aa-filter-input";
+    const cursorPos = hadFocus ? this.shadowRoot.getElementById("aa-filter-input")?.selectionStart : null;
+    this.render();
+    if (hadFocus) {
+      const input = this.shadowRoot.getElementById("aa-filter-input");
+      if (input) {
+        input.focus();
+        if (cursorPos !== null) input.setSelectionRange(cursorPos, cursorPos);
+      }
+    }
   }
 
   async _drawCharts() {
