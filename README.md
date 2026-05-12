@@ -3,7 +3,7 @@
 > A comprehensive tools panel for Home Assistant with 15 integrated tools for monitoring, debugging, system management and daily life.
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/MacSiem/ha-tools-panel/releases)
+[![Version](https://img.shields.io/badge/version-3.3.3-blue.svg)](https://github.com/MacSiem/ha-tools-panel/releases)
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-brightgreen.svg)](https://www.home-assistant.io/)
 
 ## 📸 Screenshot
@@ -69,6 +69,13 @@ No special configuration required after installation. The panel auto-discovers a
 ### Requirements
 - Home Assistant 2023.1 or newer
 - HACS 1.6.0 or newer (for HACS installation)
+
+## 🔐 Privacy & network
+
+- No telemetry, no analytics, no tracking.
+- Uses a system font stack (no Google Fonts CDN).
+- Chart.js is loaded from `cdn.jsdelivr.net` on first chart render in Energy Insights, Energy Optimizer, Automation Analyzer, and Backup Manager. You can self-host Chart.js if you prefer fully offline operation.
+- All Home Assistant data stays on your instance — the panel calls only your HA REST/WebSocket API.
 
 ## 🔄 Changelog
 

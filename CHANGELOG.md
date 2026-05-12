@@ -2,6 +2,13 @@
 
 All notable changes to HA Tools Panel are documented here.
 
+## [3.3.3] - 2026-05-12
+
+### Fixed
+- Removed Google Fonts CDN dependency from `ha-tools-loader-v3.js` (was injecting a `<link rel="stylesheet">` to `fonts.googleapis.com`) and from `ha-sentence-manager.js` template.
+- Now uses a complete cross-platform system font stack with `Inter` as the preferred face when locally installed.
+- README Privacy section: honest disclosure of the Chart.js jsDelivr CDN used by the Energy Insights, Energy Optimizer, Automation Analyzer, and Backup Manager sub-tools.
+
 ## [3.1.0] - 2026-03-23
 
 ### Added
