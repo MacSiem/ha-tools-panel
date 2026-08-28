@@ -5,6 +5,10 @@
 
 Version 4.0 replaces the dynamic monolith loader with an isolated migration notice. It no longer loads the bundled historical card copies, polls for registrations, or fetches runtime libraries from a CDN.
 
+![Historical HA Tools Panel — retired](screenshot.png)
+
+_Historical interface shown for identification only. The active 4.0 entrypoint no longer loads these bundled tools._
+
 ## Migration
 
 1. Remove the `ha-tools-panel.js` resource and `panel_custom` entry from Home Assistant.
