@@ -22,3 +22,7 @@ jobs:
         uses: hacs/action@main
         with:
           category: plugin
+      - name: Retirement regression
+        run: |
+          node --check ha-tools-panel.js
+          python3 tests/test_retired_panel.py

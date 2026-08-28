@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.0 — 2026-08-28
+
+- Retired the legacy all-in-one loader and replaced it with an isolated migration notice.
+- The entrypoint no longer dynamically loads historical tool copies, polls custom-element registration, or fetches runtime libraries.
+- Directed installations to the maintained split repositories.
+
 All notable changes to HA Tools Panel are documented here.
 
 ## [3.3.3] - 2026-05-12
